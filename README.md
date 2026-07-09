@@ -44,6 +44,10 @@ Copy the `custom_components/tandoor/` folder into your Home Assistant `config/cu
 
 The integration ships a dashboard card that renders the meal plan with recipe images, meal type chips, working/waiting times and servings — clickable through to the recipe in Tandoor.
 
+<img src="images/card.png" alt="Tandoor mealplan card" width="420">
+
+The card has a full visual editor (entity picker, days to show, max meals per day, display toggles) and appears in the dashboard card picker.
+
 **No manual installation needed** — the card is served and registered automatically by the integration. Just add it to any dashboard:
 
 ```yaml
