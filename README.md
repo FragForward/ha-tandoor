@@ -24,6 +24,10 @@ Polling intervals: shopping list every 60 s, meal plan every 5 min.
 
 ### HACS (recommended)
 
+[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FragForward&repository=ha-tandoor&category=integration)
+
+Or manually:
+
 1. In HACS, open the three-dot menu (top right) → **Custom repositories**
 2. Repository: `https://github.com/FragForward/ha-tandoor` — Type: **Integration** → **Add**
 3. Search for **Tandoor Recipes** in HACS, open it and click **Download**
@@ -35,8 +39,10 @@ Copy the `custom_components/tandoor/` folder into your Home Assistant `config/cu
 
 ## Setup
 
+[![Open your Home Assistant instance and start setting up this integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tandoor)
+
 1. **Create an API token in Tandoor:** click your user avatar (top right) → **Settings** → tab **API** → **New token**, scope `read write`. Copy the token (`tda_...`).
-2. In Home Assistant go to **Settings → Devices & Services → Add Integration** and search for **Tandoor Recipes**.
+2. In Home Assistant go to **Settings → Devices & Services → Add Integration** and search for **Tandoor Recipes** (or use the button above).
 3. Enter:
    - **URL** — the base URL of your Tandoor instance as you open it in the browser, e.g. `http://192.168.1.4:9926` (no trailing slash needed)
    - **API token** — the token from step 1
