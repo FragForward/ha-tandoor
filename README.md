@@ -42,10 +42,9 @@ Copy the `custom_components/tandoor/` folder into your Home Assistant `config/cu
 
 ## Lovelace card
 
-The repo ships an optional dashboard card ([lovelace/tandoor-mealplan-card.js](lovelace/tandoor-mealplan-card.js)) that renders the meal plan with recipe images, meal type chips, working/waiting times and servings — clickable through to the recipe in Tandoor.
+The integration ships a dashboard card that renders the meal plan with recipe images, meal type chips, working/waiting times and servings — clickable through to the recipe in Tandoor.
 
-1. Copy the file to `config/www/` and add `/local/tandoor-mealplan-card.js` as a dashboard resource (type *module*)
-2. Add the card:
+**No manual installation needed** — the card is served and registered automatically by the integration. Just add it to any dashboard:
 
 ```yaml
 type: custom:tandoor-mealplan-card
@@ -54,6 +53,8 @@ days_to_show: 2
 ```
 
 Options: `title`, `days_to_show` (1–7), `show_image`, `show_times`, `clickable`, `hide_empty_days`.
+
+Note: the recipe images are loaded directly from your Tandoor instance, so the browser needs to be able to reach the Tandoor URL.
 
 ## Tips
 
