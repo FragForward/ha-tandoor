@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v1.3
+/* Tandoor Mealplan Card v1.4
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -154,7 +154,10 @@ class TandoorMealplanCard extends HTMLElement {
       </ha-card>`;
 
     this.shadowRoot.querySelectorAll(".tile.click").forEach((el) => {
-      el.addEventListener("click", () => window.open(el.dataset.link, "_blank"));
+      el.addEventListener("click", () => {
+        const url = el.dataset.link || "";
+        if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener");
+      });
     });
   }
 }

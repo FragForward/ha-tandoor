@@ -68,16 +68,29 @@ Options: `title`, `days_to_show` (1–7), `show_image`, `show_times`, `clickable
 
 Note: the recipe images are loaded directly from your Tandoor instance, so the browser needs to be able to reach the Tandoor URL.
 
+## Shopping list → Bring! / other apps
+
+Want Tandoor shopping list entries to end up in another list app (e.g. **Bring!**)?
+**→ [Node-RED sync guide](docs/nodered-bring-sync.md)** — transfers each entry with the
+amount as description and keeps the Tandoor list empty. This is the recommended setup.
+
+Alternatively Tandoor's built-in *Connector* can push entries itself (no Node-RED, but
+one-way, amount in the title, source list never cleared) — see [connector guide](docs/connector.md).
+
 ## Good to know — Tandoor features that pair well
 
-The following are features of **Tandoor itself**, not of this integration — they are configured in Tandoor and work regardless of whether this integration is installed:
-
-- **Push instead of polling:** Tandoor ships built-in *Connectors* (in Tandoor: **Space settings → Connectors**). A HomeAssistant connector pushes every new shopping list entry straight into **any** Home Assistant todo entity (e.g. a Bring! list from the core Bring integration) using a HA long-lived access token — within seconds, no polling. If you use a connector and this integration's todo entity against the same target list, pick one mechanism to avoid duplicates. **→ [Step-by-step connector guide](docs/connector.md)**
-- **Clean shopping lists:** foods flagged *ignore shopping* in Tandoor (salt, water, …) never reach the shopping list, and Tandoor's *food alias* automations keep ingredient naming consistent across imported recipes.
+Features of **Tandoor itself** (not of this integration) that make the shopping list nicer: foods flagged *ignore shopping* in Tandoor (salt, water, …) never reach the shopping list, and Tandoor's *food alias* automations keep ingredient naming consistent across imported recipes.
 
 ## Disclaimer
 
 This is a third-party integration, not affiliated with the Tandoor project. Tested against Tandoor 2.x.
+
+**AI disclaimer:** the code, card and documentation in this repository were largely
+generated with an AI assistant (Claude) and have not been further audited by hand.
+The integration only communicates with your own Tandoor instance; the API token is
+stored in Home Assistant's config entry storage (standard HA practice) and there are
+no third-party dependencies. Review the code before use if you have elevated security
+requirements, and report anything odd via the issue tracker.
 
 ## License
 

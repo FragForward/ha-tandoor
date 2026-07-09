@@ -7,6 +7,14 @@ entries into a Home Assistant todo entity — within seconds, no polling.
 > Tandoor 2.x). They work completely independently of the ha-tandoor integration —
 > you can use them without this integration, and this integration works without them.
 
+> ⚠️ **Two caveats from practice:**
+> 1. Tandoor's connector worker **caches its configuration in memory** — after changing,
+>    disabling or deleting a connector, **restart the Tandoor container**, otherwise the
+>    old configuration keeps running.
+> 2. The connector never clears the Tandoor shopping list and puts the amount into the
+>    item **title** (`Onion (2)`). If you want the amount as a description and an
+>    auto-emptied Tandoor list, use the **[Node-RED sync](nodered-bring-sync.md)** instead.
+
 ## Connector vs. this integration's todo entity
 
 | | Connector (Tandoor feature) | `todo.…_shopping_list` (this integration) |
