@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Verbinde deine Tandoor-Recipes-Instanz. Erstelle einen API-Token in Tandoor unter Einstellungen → API.",
+        "data": {
+          "url": "URL",
+          "api_token": "API-Token",
+          "verify_ssl": "SSL-Zertifikat prüfen"
+        },
+        "data_description": {
+          "url": "Die Basis-URL deiner Tandoor-Instanz, z. B. http://192.168.1.4:9926",
+          "api_token": "Ein Tandoor-API-Token mit Lese-/Schreibrechten"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zu Tandoor fehlgeschlagen. Prüfe die URL.",
+      "invalid_auth": "Ungültiger API-Token."
+    },
+    "abort": {
+      "already_configured": "Diese Tandoor-Instanz ist bereits eingerichtet."
+    }
+  },
+  "entity": {
+    "todo": {
+      "shopping_list": { "name": "Einkaufsliste" }
+    },
+    "calendar": {
+      "mealplan": { "name": "Essensplan" }
+    },
+    "sensor": {
+      "mealplan_today": { "name": "Essensplan heute" },
+      "mealplan_tomorrow": { "name": "Essensplan morgen" },
+      "shopping_items": { "name": "Offene Einkäufe" }
+    }
+  }
+}
