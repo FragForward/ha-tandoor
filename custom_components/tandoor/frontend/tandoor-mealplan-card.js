@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v1.2
+/* Tandoor Mealplan Card v1.3
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -120,7 +120,7 @@ class TandoorMealplanCard extends HTMLElement {
           <div class="tag">
             <div class="taglabel">${this._esc(this._dayLabel(d.date))}</div>
             ${meals.length
-              ? `<div class="row">${meals.map((m) => this._tile(m)).join("")}</div>`
+              ? `<div class="row ${meals.length === 1 ? "solo" : ""}">${meals.map((m) => this._tile(m)).join("")}</div>`
               : `<div class="leer">nichts geplant</div>`}
           </div>`;
         })
@@ -135,10 +135,11 @@ class TandoorMealplanCard extends HTMLElement {
         .titel ha-icon { color: var(--accent-color, #ff9800); }
         .taglabel { font-weight: 600; font-size: 14px; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: 0.5px; margin: 10px 0 8px; }
         .row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
-        .tile { position: relative; flex: 0 0 200px; border-radius: 12px; overflow: hidden; background: var(--secondary-background-color); box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+        .tile { position: relative; flex: 1 0 200px; max-width: 100%; border-radius: 12px; overflow: hidden; background: var(--secondary-background-color); box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
         .tile.click { cursor: pointer; transition: transform .15s ease; }
         .tile.click:hover { transform: scale(1.03); }
         .img { height: 110px; background-size: cover; background-position: center; }
+        .row.solo .img { height: 190px; }
         .img.noimg { display: flex; align-items: center; justify-content: center; color: var(--disabled-text-color); --mdc-icon-size: 42px; }
         .typ { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.65); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
         .body { padding: 8px 10px 10px; }
