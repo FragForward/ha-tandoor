@@ -18,6 +18,8 @@ Unofficial Home Assistant integration for [Tandoor Recipes](https://github.com/T
 
 Polling intervals: shopping list every 60 s, meal plan every 5 min.
 
+<img src="images/integration.png" alt="Tandoor integration device page in Home Assistant" width="700">
+
 ## Installation
 
 ### HACS (recommended)
@@ -60,10 +62,12 @@ Options: `title`, `days_to_show` (1–7), `show_image`, `show_times`, `clickable
 
 Note: the recipe images are loaded directly from your Tandoor instance, so the browser needs to be able to reach the Tandoor URL.
 
-## Tips
+## Good to know — Tandoor features that pair well
 
-- **Shopping list to Bring!/other apps:** Tandoor's built-in *Connectors* (Tandoor → Space settings → Connectors) can push shopping list entries straight into any Home Assistant todo entity — e.g. a Bring! list from the core Bring integration.
-- Foods flagged *ignore shopping* in Tandoor (salt, water, …) never reach the shopping list, and Tandoor's food alias automations keep naming consistent.
+The following are features of **Tandoor itself**, not of this integration — they are configured in Tandoor and work regardless of whether this integration is installed:
+
+- **Push instead of polling:** Tandoor ships built-in *Connectors* (in Tandoor: **Space settings → Connectors**). A HomeAssistant connector pushes every new shopping list entry straight into **any** Home Assistant todo entity (e.g. a Bring! list from the core Bring integration) using a HA long-lived access token — within seconds, no polling. If you use a connector and this integration's todo entity against the same target list, pick one mechanism to avoid duplicates.
+- **Clean shopping lists:** foods flagged *ignore shopping* in Tandoor (salt, water, …) never reach the shopping list, and Tandoor's *food alias* automations keep ingredient naming consistent across imported recipes.
 
 ## Disclaimer
 
