@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v1.1
+/* Tandoor Mealplan Card v1.2
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -9,26 +9,45 @@
  *   entity: sensor.tandoor_essensplan_heute   # your "Meal plan today" sensor
  *   days_to_show: 2
  */
+
+const TANDOOR_CARD_DEFAULTS = {
+  days_to_show: 2,
+  max_meals_per_day: 0, // 0 = alle
+  title: "Essensplan",
+  show_image: true,
+  show_times: true,
+  clickable: true,
+  hide_empty_days: false,
+};
+
+function tandoorFindMealplanSensor(hass) {
+  if (!hass) return "";
+  return (
+    Object.keys(hass.states).find(
+      (id) =>
+        id.startsWith("sensor.") &&
+        hass.states[id].attributes &&
+        Array.isArray(hass.states[id].attributes.days)
+    ) || ""
+  );
+}
+
 class TandoorMealplanCard extends HTMLElement {
-  static getStubConfig() {
-    return { entity: "", days_to_show: 2 };
+  static getConfigElement() {
+    return document.createElement("tandoor-mealplan-card-editor");
+  }
+
+  static getStubConfig(hass) {
+    return { entity: tandoorFindMealplanSensor(hass), days_to_show: 2 };
   }
 
   setConfig(config) {
     if (!config.entity) {
-      throw new Error("tandoor-mealplan-card: 'entity' is required (the meal plan today sensor)");
+      throw new Error(
+        "tandoor-mealplan-card: 'entity' fehlt (der Sensor 'Essensplan heute' der Tandoor-Integration)"
+      );
     }
-    this._config = Object.assign(
-      {
-        days_to_show: 2,
-        title: "Essensplan",
-        show_image: true,
-        show_times: true,
-        clickable: true,
-        hide_empty_days: false,
-      },
-      config
-    );
+    this._config = Object.assign({}, TANDOOR_CARD_DEFAULTS, config);
     this._lastKey = null;
   }
 
@@ -93,13 +112,18 @@ class TandoorMealplanCard extends HTMLElement {
       const days = (st.attributes.days || []).slice(0, c.days_to_show);
       content = days
         .filter((d) => !c.hide_empty_days || (d.meals && d.meals.length))
-        .map((d) => `
+        .map((d) => {
+          const meals = c.max_meals_per_day > 0
+            ? (d.meals || []).slice(0, c.max_meals_per_day)
+            : d.meals || [];
+          return `
           <div class="tag">
             <div class="taglabel">${this._esc(this._dayLabel(d.date))}</div>
-            ${d.meals && d.meals.length
-              ? `<div class="row">${d.meals.map((m) => this._tile(m)).join("")}</div>`
+            ${meals.length
+              ? `<div class="row">${meals.map((m) => this._tile(m)).join("")}</div>`
               : `<div class="leer">nichts geplant</div>`}
-          </div>`)
+          </div>`;
+        })
         .join("");
       if (!content) content = `<div class="leer">nichts geplant</div>`;
     }
@@ -134,10 +158,90 @@ class TandoorMealplanCard extends HTMLElement {
   }
 }
 
+class TandoorMealplanCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = Object.assign({}, TANDOOR_CARD_DEFAULTS, config);
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  _labels(lang) {
+    const de = {
+      entity: "Essensplan-Sensor (Tandoor „Essensplan heute“)",
+      title: "Titel",
+      days_to_show: "Angezeigte Tage",
+      max_meals_per_day: "Max. Mahlzeiten pro Tag (0 = alle)",
+      show_image: "Rezeptbilder anzeigen",
+      show_times: "Arbeits-/Wartezeit anzeigen",
+      clickable: "Klick öffnet Rezept in Tandoor",
+      hide_empty_days: "Leere Tage ausblenden",
+    };
+    const en = {
+      entity: "Meal plan sensor (Tandoor 'Meal plan today')",
+      title: "Title",
+      days_to_show: "Days to show",
+      max_meals_per_day: "Max meals per day (0 = all)",
+      show_image: "Show recipe images",
+      show_times: "Show working/waiting time",
+      clickable: "Click opens recipe in Tandoor",
+      hide_empty_days: "Hide empty days",
+    };
+    return String(lang || "").startsWith("de") ? de : en;
+  }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+    if (!this._form) {
+      this._form = document.createElement("ha-form");
+      this._form.addEventListener("value-changed", (e) => {
+        const config = { type: "custom:tandoor-mealplan-card", ...e.detail.value };
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            detail: { config },
+            bubbles: true,
+            composed: true,
+          })
+        );
+      });
+      this.appendChild(this._form);
+    }
+    const labels = this._labels(this._hass.language);
+    this._form.hass = this._hass;
+    this._form.data = this._config;
+    this._form.schema = [
+      {
+        name: "entity",
+        required: true,
+        selector: { entity: { domain: "sensor", integration: "tandoor" } },
+      },
+      { name: "title", selector: { text: {} } },
+      {
+        name: "days_to_show",
+        selector: { number: { min: 1, max: 7, mode: "slider" } },
+      },
+      {
+        name: "max_meals_per_day",
+        selector: { number: { min: 0, max: 8, mode: "slider" } },
+      },
+      { name: "show_image", selector: { boolean: {} } },
+      { name: "show_times", selector: { boolean: {} } },
+      { name: "clickable", selector: { boolean: {} } },
+      { name: "hide_empty_days", selector: { boolean: {} } },
+    ];
+    this._form.computeLabel = (schema) => labels[schema.name] || schema.name;
+  }
+}
+
 customElements.define("tandoor-mealplan-card", TandoorMealplanCard);
+customElements.define("tandoor-mealplan-card-editor", TandoorMealplanCardEditor);
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "tandoor-mealplan-card",
   name: "Tandoor Mealplan Card",
   description: "Meal plan from Tandoor Recipes with recipe images (needs the ha-tandoor integration)",
+  preview: true,
 });
