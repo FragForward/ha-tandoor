@@ -4,7 +4,7 @@
 
 # Tandoor Recipes for Home Assistant
 
-Unofficial Home Assistant integration for [Tandoor Recipes](https://tandoor.dev) — bringing your shopping list and meal plan into Home Assistant, similar to what the core Mealie integration offers.
+Unofficial Home Assistant integration for [Tandoor Recipes](https://github.com/TandoorRecipes/recipes) — bringing your shopping list and meal plan into Home Assistant, similar to what the core Mealie integration offers.
 
 ## Features
 
