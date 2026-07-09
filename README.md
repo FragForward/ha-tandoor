@@ -72,7 +72,7 @@ Note: the recipe images are loaded directly from your Tandoor instance, so the b
 
 The following are features of **Tandoor itself**, not of this integration — they are configured in Tandoor and work regardless of whether this integration is installed:
 
-- **Push instead of polling:** Tandoor ships built-in *Connectors* (in Tandoor: **Space settings → Connectors**). A HomeAssistant connector pushes every new shopping list entry straight into **any** Home Assistant todo entity (e.g. a Bring! list from the core Bring integration) using a HA long-lived access token — within seconds, no polling. If you use a connector and this integration's todo entity against the same target list, pick one mechanism to avoid duplicates.
+- **Push instead of polling:** Tandoor ships built-in *Connectors* (in Tandoor: **Space settings → Connectors**). A HomeAssistant connector pushes every new shopping list entry straight into **any** Home Assistant todo entity (e.g. a Bring! list from the core Bring integration) using a HA long-lived access token — within seconds, no polling. If you use a connector and this integration's todo entity against the same target list, pick one mechanism to avoid duplicates. **→ [Step-by-step connector guide](docs/connector.md)**
 - **Clean shopping lists:** foods flagged *ignore shopping* in Tandoor (salt, water, …) never reach the shopping list, and Tandoor's *food alias* automations keep ingredient naming consistent across imported recipes.
 
 ## Disclaimer
