@@ -2,15 +2,15 @@
   "config": {
     "step": {
       "user": {
-        "description": "Connect to your Tandoor Recipes instance. Create an API token in Tandoor under Settings → API.",
+        "description": "Connect Home Assistant to your Tandoor Recipes instance.\n\n1. In Tandoor, click your user avatar (top right) → **Settings** → tab **API**\n2. Create a **new token** with scope `read write` and copy it (`tda_...`)\n3. Enter your Tandoor URL and the token below",
         "data": {
           "url": "URL",
           "api_token": "API token",
           "verify_ssl": "Verify SSL certificate"
         },
         "data_description": {
-          "url": "The base URL of your Tandoor instance, e.g. http://192.168.1.4:9926",
-          "api_token": "A Tandoor API token with read/write scope"
+          "url": "The address of your Tandoor instance as you open it in the browser, e.g. http://192.168.1.4:9926",
+          "api_token": "The API token created in Tandoor under Settings → API (scope read write)"
         }
       }
     },
@@ -24,15 +24,25 @@
   },
   "entity": {
     "todo": {
-      "shopping_list": { "name": "Shopping list" }
+      "shopping_list": {
+        "name": "Shopping list"
+      }
     },
     "calendar": {
-      "mealplan": { "name": "Meal plan" }
+      "mealplan": {
+        "name": "Meal plan"
+      }
     },
     "sensor": {
-      "mealplan_today": { "name": "Meal plan today" },
-      "mealplan_tomorrow": { "name": "Meal plan tomorrow" },
-      "shopping_items": { "name": "Open shopping items" }
+      "mealplan_today": {
+        "name": "Meal plan today"
+      },
+      "mealplan_tomorrow": {
+        "name": "Meal plan tomorrow"
+      },
+      "shopping_items": {
+        "name": "Open shopping items"
+      }
     }
   }
 }

@@ -2,15 +2,15 @@
   "config": {
     "step": {
       "user": {
-        "description": "Verbinde deine Tandoor-Recipes-Instanz. Erstelle einen API-Token in Tandoor unter Einstellungen → API.",
+        "description": "Verbinde Home Assistant mit deiner Tandoor-Recipes-Instanz.\n\n1. Klicke in Tandoor auf deinen Benutzer-Avatar (oben rechts) → **Einstellungen** → Reiter **API**\n2. Erstelle einen **neuen Token** mit Berechtigung `read write` und kopiere ihn (`tda_...`)\n3. Trage unten deine Tandoor-URL und den Token ein",
         "data": {
           "url": "URL",
           "api_token": "API-Token",
           "verify_ssl": "SSL-Zertifikat prüfen"
         },
         "data_description": {
-          "url": "Die Basis-URL deiner Tandoor-Instanz, z. B. http://192.168.1.4:9926",
-          "api_token": "Ein Tandoor-API-Token mit Lese-/Schreibrechten"
+          "url": "Die Adresse deiner Tandoor-Instanz, wie du sie im Browser öffnest, z. B. http://192.168.1.4:9926",
+          "api_token": "Der in Tandoor unter Einstellungen → API erstellte Token (Berechtigung read write)"
         }
       }
     },
@@ -24,15 +24,25 @@
   },
   "entity": {
     "todo": {
-      "shopping_list": { "name": "Einkaufsliste" }
+      "shopping_list": {
+        "name": "Einkaufsliste"
+      }
     },
     "calendar": {
-      "mealplan": { "name": "Essensplan" }
+      "mealplan": {
+        "name": "Essensplan"
+      }
     },
     "sensor": {
-      "mealplan_today": { "name": "Essensplan heute" },
-      "mealplan_tomorrow": { "name": "Essensplan morgen" },
-      "shopping_items": { "name": "Offene Einkäufe" }
+      "mealplan_today": {
+        "name": "Essensplan heute"
+      },
+      "mealplan_tomorrow": {
+        "name": "Essensplan morgen"
+      },
+      "shopping_items": {
+        "name": "Offene Einkäufe"
+      }
     }
   }
 }

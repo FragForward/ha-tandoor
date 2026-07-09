@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="images/icon@2x.png" alt="Tandoor Recipes" width="160">
+</p>
+
 # Tandoor Recipes for Home Assistant
 
 Unofficial Home Assistant integration for [Tandoor Recipes](https://tandoor.dev) — bringing your shopping list and meal plan into Home Assistant, similar to what the core Mealie integration offers.
@@ -18,19 +22,23 @@ Polling intervals: shopping list every 60 s, meal plan every 5 min.
 
 ### HACS (recommended)
 
-1. HACS → three-dot menu → **Custom repositories**
-2. Add `https://github.com/FragForward/ha-tandoor` as type **Integration**
-3. Install **Tandoor Recipes** and restart Home Assistant
+1. In HACS, open the three-dot menu (top right) → **Custom repositories**
+2. Repository: `https://github.com/FragForward/ha-tandoor` — Type: **Integration** → **Add**
+3. Search for **Tandoor Recipes** in HACS, open it and click **Download**
+4. Restart Home Assistant (Settings → System → Restart)
 
 ### Manual
 
-Copy `custom_components/tandoor/` into your Home Assistant `config/custom_components/` directory and restart.
+Copy the `custom_components/tandoor/` folder into your Home Assistant `config/custom_components/` directory and restart Home Assistant.
 
-## Configuration
+## Setup
 
-1. In Tandoor, create an API token: user menu → **Settings → API** (scope `read write`)
-2. In Home Assistant: **Settings → Devices & Services → Add Integration → Tandoor Recipes**
-3. Enter the base URL (e.g. `http://192.168.1.4:9926`) and the token
+1. **Create an API token in Tandoor:** click your user avatar (top right) → **Settings** → tab **API** → **New token**, scope `read write`. Copy the token (`tda_...`).
+2. In Home Assistant go to **Settings → Devices & Services → Add Integration** and search for **Tandoor Recipes**.
+3. Enter:
+   - **URL** — the base URL of your Tandoor instance as you open it in the browser, e.g. `http://192.168.1.4:9926` (no trailing slash needed)
+   - **API token** — the token from step 1
+4. Click **OK** — the integration validates the connection and creates the device with all entities.
 
 ## Lovelace card
 
