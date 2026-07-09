@@ -1,0 +1,15 @@
+{
+  "entity": {
+    "todo": {
+      "shopping_list": { "default": "mdi:cart" }
+    },
+    "calendar": {
+      "mealplan": { "default": "mdi:silverware-fork-knife" }
+    },
+    "sensor": {
+      "mealplan_today": { "default": "mdi:silverware-fork-knife" },
+      "mealplan_tomorrow": { "default": "mdi:silverware-fork-knife" },
+      "shopping_items": { "default": "mdi:cart-outline" }
+    }
+  }
+}
