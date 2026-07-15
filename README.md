@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/icon@2x.png" alt="Tandoor Recipes" width="160">
+  <img src="https://raw.githubusercontent.com/FragForward/ha-tandoor/main/images/icon@2x.png" alt="Tandoor Recipes" width="160">
 </p>
 
 # Tandoor Recipes for Home Assistant
@@ -18,7 +18,7 @@ Unofficial Home Assistant integration for [Tandoor Recipes](https://github.com/T
 
 Polling intervals: shopping list every 60 s, meal plan every 5 min.
 
-<img src="images/integration.png" alt="Tandoor integration device page in Home Assistant" width="700">
+<img src="https://raw.githubusercontent.com/FragForward/ha-tandoor/main/images/integration.png" alt="Tandoor integration device page in Home Assistant" width="700">
 
 ## Installation
 
@@ -52,7 +52,7 @@ Copy the `custom_components/tandoor/` folder into your Home Assistant `config/cu
 
 The integration ships a dashboard card that renders the meal plan with recipe images, meal type chips, working/waiting times and servings — clickable through to the recipe in Tandoor.
 
-<img src="images/card.png" alt="Tandoor mealplan card" width="420">
+<img src="https://raw.githubusercontent.com/FragForward/ha-tandoor/main/images/card.png" alt="Tandoor mealplan card" width="420">
 
 The card has a full visual editor (entity picker, days to show, max meals per day, display toggles) and appears in the dashboard card picker.
 

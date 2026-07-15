@@ -18,6 +18,7 @@ from .coordinator import (
     TandoorMealplanCoordinator,
     TandoorShoppingCoordinator,
 )
+from .websocket import async_register_websocket_api
 
 PLATFORMS: list[Platform] = [Platform.CALENDAR, Platform.SENSOR, Platform.TODO]
 
@@ -39,9 +40,18 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
     hass.data[f"{DOMAIN}_frontend_registered"] = True
 
 
+def _register_websocket_api(hass: HomeAssistant) -> None:
+    """Register the WebSocket commands once per Home Assistant start."""
+    if hass.data.get(f"{DOMAIN}_ws_registered"):
+        return
+    async_register_websocket_api(hass)
+    hass.data[f"{DOMAIN}_ws_registered"] = True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: TandoorConfigEntry) -> bool:
     """Set up Tandoor from a config entry."""
     await _async_register_frontend(hass)
+    _register_websocket_api(hass)
 
     client = TandoorClient(
         base_url=entry.data[CONF_URL],
