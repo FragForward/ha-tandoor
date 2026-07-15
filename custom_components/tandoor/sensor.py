@@ -31,6 +31,8 @@ def _meal_dict(plan: MealPlanEntry) -> dict[str, Any]:
         "note": plan.note,
         "image": plan.image,
         "url": plan.url,
+        "recipe_id": plan.recipe_id,
+        "rating": plan.rating,
         "working_time": plan.working_time,
         "waiting_time": plan.waiting_time,
     }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -58,6 +59,7 @@ class MealPlanEntry:
     url: str | None
     working_time: int
     waiting_time: int
+    rating: float | None = None
 
 
 @dataclass
@@ -119,6 +121,12 @@ class TandoorClient:
         if isinstance(data, dict):
             return data.get("results", [])
         return data or []
+
+    def _abs_url(self, path: str | None) -> str | None:
+        """Turn a relative media/API path into an absolute URL."""
+        if not path:
+            return None
+        return path if str(path).startswith("http") else f"{self.base_url}{path}"
 
     async def get_space(self) -> Space:
         """Return the first space, used for connection validation."""
@@ -197,9 +205,6 @@ class TandoorClient:
         plans: list[MealPlanEntry] = []
         for p in data:
             recipe = p.get("recipe") or {}
-            image = recipe.get("image")
-            if image and not str(image).startswith("http"):
-                image = f"{self.base_url}{image}"
             plans.append(
                 MealPlanEntry(
                     plan_id=p["id"],
@@ -209,7 +214,7 @@ class TandoorClient:
                     servings=p.get("servings"),
                     note=p.get("note") or None,
                     recipe_id=recipe.get("id"),
-                    image=image,
+                    image=self._abs_url(recipe.get("image")),
                     url=(
                         f"{self.base_url}/view/recipe/{recipe['id']}"
                         if recipe.get("id")
@@ -217,7 +222,114 @@ class TandoorClient:
                     ),
                     working_time=recipe.get("working_time") or 0,
                     waiting_time=recipe.get("waiting_time") or 0,
+                    rating=recipe.get("rating"),
                 )
             )
         plans.sort(key=lambda p: (p.plan_date, p.plan_id))
+        await self._fill_missing_ratings(plans)
         return plans
+
+    async def _fill_missing_ratings(self, plans: list[MealPlanEntry]) -> None:
+        """Load per-recipe ratings the meal-plan endpoint did not embed.
+
+        The /api/meal-plan/ recipe object is not annotated with the (per-user
+        average) rating, so fetch it once per distinct recipe and cache it onto
+        every plan entry that shares that recipe.
+        """
+        missing = {
+            p.recipe_id
+            for p in plans
+            if p.recipe_id and p.rating is None
+        }
+        if not missing:
+            return
+        results = await asyncio.gather(
+            *(self.get_recipe_rating(rid) for rid in missing),
+            return_exceptions=True,
+        )
+        ratings = {
+            rid: res
+            for rid, res in zip(missing, results)
+            if not isinstance(res, Exception)
+        }
+        for p in plans:
+            if p.rating is None and p.recipe_id in ratings:
+                p.rating = ratings[p.recipe_id]
+
+    async def get_recipe(self, recipe_id: int) -> dict[str, Any]:
+        """Return a trimmed recipe detail for the card popup.
+
+        Includes the (per-user) rating, absolute image URL and the steps with
+        their ingredients so the recipe can be rendered without opening Tandoor.
+        """
+        data = await self._request("GET", f"/api/recipe/{recipe_id}/")
+        steps: list[dict[str, Any]] = []
+        for step in data.get("steps") or []:
+            ingredients: list[dict[str, Any]] = []
+            for ing in step.get("ingredients") or []:
+                if ing.get("is_header"):
+                    ingredients.append({"header": (ing.get("note") or "").strip()})
+                    continue
+                ingredients.append(
+                    {
+                        "amount": ing.get("amount") or 0,
+                        "unit": (ing.get("unit") or {}).get("name") or "",
+                        "food": (ing.get("food") or {}).get("name") or "",
+                        "note": ing.get("note") or "",
+                    }
+                )
+            steps.append(
+                {
+                    "name": (step.get("name") or "").strip(),
+                    "instruction": step.get("instruction") or "",
+                    "ingredients": ingredients,
+                }
+            )
+        return {
+            "id": data.get("id"),
+            "name": data.get("name") or "",
+            "description": data.get("description") or "",
+            "image": self._abs_url(data.get("image")),
+            "servings": data.get("servings"),
+            "working_time": data.get("working_time") or 0,
+            "waiting_time": data.get("waiting_time") or 0,
+            "source_url": data.get("source_url") or None,
+            "url": f"{self.base_url}/view/recipe/{recipe_id}",
+            "rating": data.get("rating"),
+            "steps": steps,
+        }
+
+    async def get_recipe_rating(self, recipe_id: int) -> float | None:
+        """Return the (per-user average) rating of a single recipe."""
+        data = await self._request("GET", f"/api/recipe/{recipe_id}/")
+        return data.get("rating")
+
+    async def set_rating(self, recipe_id: int, rating: int | None) -> None:
+        """Set the recipe rating by writing to the user's cook log.
+
+        Tandoor stores ratings only on CookLog entries (the recipe rating is the
+        per-user average). We keep the behaviour "one settable value" by
+        overwriting the most recent existing cook-log entry for this recipe, and
+        only create a new one when none exists yet.
+        """
+        if rating is not None:
+            rating = max(0, min(5, int(rating)))
+        entries = self._results(
+            await self._request(
+                "GET", "/api/cook-log/", params={"recipe": recipe_id}
+            )
+        )
+        if entries:
+            target = max(
+                entries,
+                key=lambda e: e.get("updated_at") or e.get("created_at") or "",
+            )
+            await self._request(
+                "PATCH", f"/api/cook-log/{target['id']}/", json={"rating": rating}
+            )
+            return
+        await self._request(
+            "POST",
+            "/api/cook-log/",
+            json={"recipe": recipe_id, "rating": rating},
+        )
