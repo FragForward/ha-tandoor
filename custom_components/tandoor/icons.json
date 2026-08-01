@@ -9,7 +9,13 @@
     "sensor": {
       "mealplan_today": { "default": "mdi:silverware-fork-knife" },
       "mealplan_tomorrow": { "default": "mdi:silverware-fork-knife" },
-      "shopping_items": { "default": "mdi:cart-outline" }
+      "shopping_items": { "default": "mdi:cart-outline" },
+      "kochliste": { "default": "mdi:chef-hat" }
     }
+  },
+  "services": {
+    "kochliste_gekocht": { "service": "mdi:check-circle-outline" },
+    "kochliste_kochbar": { "service": "mdi:cart-check" },
+    "kochliste_bewerten": { "service": "mdi:star" }
   }
 }

@@ -15,6 +15,7 @@ Unofficial Home Assistant integration for [Tandoor Recipes](https://github.com/T
 | Meal plan today | `sensor` | Names of today's planned meals. Carries a `days` attribute with the full next 7 days (name, meal type, servings, image, recipe URL, working/waiting time) — ideal for dashboard cards. |
 | Meal plan tomorrow | `sensor` | Names of tomorrow's planned meals. |
 | Open shopping items | `sensor` | Number of unchecked shopping list entries. |
+| Kochliste | `sensor` | Optional: cooking backlog of the Essensplan website (not Tandoor) — see [Kochliste](#kochliste-essensplan-website-companion). |
 
 Polling intervals: shopping list every 60 s, meal plan every 5 min.
 
@@ -67,6 +68,54 @@ days_to_show: 2
 Options: `title`, `days_to_show` (1–7), `show_image`, `show_times`, `clickable`, `hide_empty_days`.
 
 Note: the recipe images are loaded directly from your Tandoor instance, so the browser needs to be able to reach the Tandoor URL.
+
+## Kochliste (Essensplan website companion)
+
+Since v0.5.0 the integration can additionally show and operate the **Kochliste**
+(cooking backlog) of the family *Essensplan* website — a small companion API
+that is **not part of Tandoor** (`http://<essensplan-host>/api.php`, no auth).
+
+**Setup:** open the integration's **Configure** dialog (options) and set the
+**Essensplan URL** (default `http://192.168.1.4:8091`). Leave it empty to
+disable the feature. If the API is unreachable the integration keeps working
+as before — the Kochliste sensor just becomes unavailable and recovers
+automatically (polled every 60 s).
+
+**Entity:** `sensor.tandoor_kochliste` — state is the number of recipes not
+yet cooked; attributes `rezepte` (full list: `id`, `titel`, `recipe_id`,
+`bild`, `quelle`, `status` = `einkaufen`/`kochbar`/`gekocht`, `hinzugefuegt`,
+`gekocht_am`) and `batch`.
+
+**Card:** the bundled `custom:tandoor-kochliste-card` (registered by the same
+JS module, no extra resource needed) lists all open recipes with a round
+recipe image, a status chip (🛒 *einkaufen* = dimmed/orange, *kochbar* =
+normal) and:
+
+- a green **Gekocht ✓** button on cookable recipes — confirms, calls
+  `tandoor.kochliste_gekocht` and then opens a **star rating popup**
+  (5 stars + optional comment → `tandoor.kochliste_bewerten`; skipped for
+  free-text entries without a Tandoor `recipe_id`),
+- an **Einkaufsliste** link on shopping-state recipes that opens
+  `<essensplan_url>/einkauf.php`,
+- optionally the recipes cooked in the last days as a small ✓ list.
+
+```yaml
+type: custom:tandoor-kochliste-card
+entity: sensor.tandoor_kochliste   # optional, auto-detected
+title: Kochliste
+essensplan_url: http://192.168.1.4:8091   # for the shopping list link
+show_gekocht: true      # show recently cooked recipes
+gekocht_tage: 3         # ... of the last N days
+confirm_gekocht: true   # ask before marking as cooked
+```
+
+**Services** (all refresh the Kochliste sensor afterwards):
+
+| Service | Fields | Effect |
+|---|---|---|
+| `tandoor.kochliste_gekocht` | `id` (e.g. `k7`) | Marks the item as cooked; the website also creates today's meal plan entry in Tandoor. |
+| `tandoor.kochliste_kochbar` | `id` | Moves the item from *einkaufen* to *kochbar*. |
+| `tandoor.kochliste_bewerten` | `recipe_id`, `sterne` (0–5, 0 = delete), `kommentar` (optional) | Stars + comment for the Tandoor cook log. |
 
 ## Shopping list → Bring! / other apps
 

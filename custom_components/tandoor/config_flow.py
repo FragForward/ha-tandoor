@@ -6,12 +6,18 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_API_TOKEN, CONF_URL, CONF_VERIFY_SSL
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import TandoorAuthenticationError, TandoorClient, TandoorConnectionError
-from .const import DOMAIN
+from .const import CONF_ESSENSPLAN_URL, DEFAULT_ESSENSPLAN_URL, DOMAIN
 
 USER_SCHEMA = vol.Schema(
     {
@@ -26,6 +32,12 @@ class TandoorConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tandoor."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> TandoorOptionsFlow:
+        """Create the options flow."""
+        return TandoorOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -58,4 +70,34 @@ class TandoorConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=USER_SCHEMA, errors=errors
+        )
+
+
+class TandoorOptionsFlow(OptionsFlow):
+    """Options flow: URL of the Essensplan website (Kochliste feature)."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            user_input[CONF_ESSENSPLAN_URL] = (
+                user_input.get(CONF_ESSENSPLAN_URL) or ""
+            ).strip().rstrip("/")
+            return self.async_create_entry(data=user_input)
+
+        current = self.config_entry.options.get(
+            CONF_ESSENSPLAN_URL, DEFAULT_ESSENSPLAN_URL
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_ESSENSPLAN_URL,
+                        default="",
+                        description={"suggested_value": current},
+                    ): str,
+                }
+            ),
         )

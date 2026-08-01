@@ -4,9 +4,14 @@ from datetime import timedelta
 
 DOMAIN = "tandoor"
 
-FRONTEND_VERSION = "0.4.0"
+FRONTEND_VERSION = "0.5.0"
 FRONTEND_URL = f"/{DOMAIN}-frontend/tandoor-mealplan-card.js"
 
 SHOPPING_UPDATE_INTERVAL = timedelta(seconds=60)
 MEALPLAN_UPDATE_INTERVAL = timedelta(minutes=5)
 MEALPLAN_DAYS = 7
+
+# Kochliste (Essensplan website companion API, not part of Tandoor itself)
+CONF_ESSENSPLAN_URL = "essensplan_url"
+DEFAULT_ESSENSPLAN_URL = "http://192.168.1.4:8091"
+KOCHLISTE_UPDATE_INTERVAL = timedelta(seconds=60)

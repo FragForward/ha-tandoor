@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 import logging
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -12,13 +13,21 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .api import (
+    EssensplanClient,
+    EssensplanError,
     MealPlanEntry,
     ShoppingEntry,
     TandoorAuthenticationError,
     TandoorClient,
     TandoorConnectionError,
 )
-from .const import DOMAIN, MEALPLAN_DAYS, MEALPLAN_UPDATE_INTERVAL, SHOPPING_UPDATE_INTERVAL
+from .const import (
+    DOMAIN,
+    KOCHLISTE_UPDATE_INTERVAL,
+    MEALPLAN_DAYS,
+    MEALPLAN_UPDATE_INTERVAL,
+    SHOPPING_UPDATE_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +38,7 @@ class TandoorData:
     client: TandoorClient
     shopping: TandoorShoppingCoordinator
     mealplan: TandoorMealplanCoordinator
+    kochliste: TandoorKochlisteCoordinator | None = None
 
 
 TandoorConfigEntry = ConfigEntry[TandoorData]
@@ -85,3 +95,28 @@ class TandoorMealplanCoordinator(DataUpdateCoordinator[list[MealPlanEntry]]):
             )
         except (TandoorAuthenticationError, TandoorConnectionError) as err:
             raise UpdateFailed(f"Error fetching meal plan: {err}") from err
+
+
+class TandoorKochlisteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """Polls the Kochliste of the Essensplan website (not Tandoor itself)."""
+
+    config_entry: TandoorConfigEntry
+
+    def __init__(
+        self, hass: HomeAssistant, entry: TandoorConfigEntry, client: EssensplanClient
+    ) -> None:
+        """Initialize the coordinator."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            config_entry=entry,
+            name=f"{DOMAIN}_kochliste",
+            update_interval=KOCHLISTE_UPDATE_INTERVAL,
+        )
+        self.client = client
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        try:
+            return await self.client.get_kochliste()
+        except EssensplanError as err:
+            raise UpdateFailed(f"Error fetching Kochliste: {err}") from err
