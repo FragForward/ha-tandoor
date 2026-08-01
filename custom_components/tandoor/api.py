@@ -22,6 +22,10 @@ class TandoorAuthenticationError(TandoorError):
     """The API token was rejected."""
 
 
+class EssensplanError(TandoorError):
+    """The Essensplan website API is unreachable or returned an error."""
+
+
 @dataclass
 class ShoppingEntry:
     """A single entry on the Tandoor shopping list."""
@@ -333,3 +337,77 @@ class TandoorClient:
             "/api/cook-log/",
             json={"recipe": recipe_id, "rating": rating},
         )
+
+
+@dataclass
+class EssensplanClient:
+    """Thin async client for the Essensplan website API (api.php).
+
+    This is NOT Tandoor: the family meal-planning website exposes the
+    "Kochliste" (cooking backlog) via a small JSON API without auth.
+    """
+
+    base_url: str
+    session: aiohttp.ClientSession
+    request_timeout: float = 15.0
+
+    def __post_init__(self) -> None:
+        self.base_url = self.base_url.rstrip("/")
+
+    async def _request(
+        self, method: str, aktion: str, json: dict[str, Any] | None = None
+    ) -> Any:
+        """Call api.php?aktion=... and return the decoded JSON body."""
+        try:
+            async with self.session.request(
+                method,
+                f"{self.base_url}/api.php",
+                params={"aktion": aktion},
+                json=json,
+                timeout=aiohttp.ClientTimeout(total=self.request_timeout),
+            ) as resp:
+                if resp.status >= 400:
+                    body = await resp.text()
+                    raise EssensplanError(
+                        f"HTTP {resp.status} for aktion={aktion}: {body[:200]}"
+                    )
+                # api.php may not send application/json — parse regardless.
+                return await resp.json(content_type=None)
+        except (TimeoutError, aiohttp.ClientError, ValueError) as err:
+            raise EssensplanError(str(err)) from err
+
+    async def get_kochliste(self) -> dict[str, Any]:
+        """Return the Kochliste ({'batch': N, 'rezepte': [...]})."""
+        data = await self._request("GET", "status")
+        kochliste = (data or {}).get("kochliste")
+        if not isinstance(kochliste, dict):
+            raise EssensplanError("Status response has no 'kochliste' field")
+        return kochliste
+
+    async def _post_ok(self, aktion: str, payload: dict[str, Any]) -> None:
+        """POST an action and raise if the API reports failure."""
+        data = await self._request("POST", aktion, json=payload)
+        if isinstance(data, dict) and data.get("ok") is False:
+            raise EssensplanError(
+                f"aktion={aktion} failed: {data.get('fehler') or data}"
+            )
+
+    async def kochliste_gekocht(self, item_id: str) -> None:
+        """Mark a Kochliste item as cooked (also logs it in Tandoor's plan)."""
+        await self._post_ok("gekocht", {"id": item_id})
+
+    async def kochliste_kochbar(self, item_id: str) -> None:
+        """Move a Kochliste item from 'einkaufen' to 'kochbar'."""
+        await self._post_ok("kochbar", {"id": item_id})
+
+    async def rezept_stern(
+        self, recipe_id: int, sterne: int, kommentar: str | None = None
+    ) -> None:
+        """Rate a recipe 0-5 stars (0 deletes the rating) via the website."""
+        payload: dict[str, Any] = {
+            "recipe_id": recipe_id,
+            "sterne": max(0, min(5, int(sterne))),
+        }
+        if kommentar:
+            payload["kommentar"] = kommentar
+        await self._post_ok("rezept_stern", payload)

@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.4.0
+/* Tandoor Mealplan Card v0.5.0
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -8,6 +8,9 @@
  *   type: custom:tandoor-mealplan-card
  *   entity: sensor.tandoor_essensplan_heute   # your "Meal plan today" sensor
  *   days_to_show: 2
+ *
+ * This file also registers custom:tandoor-kochliste-card (see below) so no
+ * extra Lovelace resource is needed.
  */
 
 const TANDOOR_CARD_DEFAULTS = {
@@ -535,6 +538,388 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
+/* Tandoor Kochliste Card v0.5.0
+ * Shows the Kochliste (cooking backlog) of the Essensplan website.
+ * Data source: the "Kochliste" sensor of the ha-tandoor integration
+ * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
+ *  hinzugefuegt, gekocht_am}] and "batch").
+ *
+ * Example card config:
+ *   type: custom:tandoor-kochliste-card
+ *   entity: sensor.tandoor_kochliste   # optional, auto-detected
+ */
+
+const TANDOOR_KOCHLISTE_DEFAULTS = {
+  title: "Kochliste",
+  essensplan_url: "http://192.168.1.4:8091",
+  show_gekocht: true, // gekochte Rezepte der letzten Tage klein anzeigen
+  gekocht_tage: 3,
+  confirm_gekocht: true, // vor dem Abhaken nachfragen
+};
+
+function tandoorFindKochlisteSensor(hass) {
+  if (!hass) return "";
+  return (
+    Object.keys(hass.states).find(
+      (id) =>
+        id.startsWith("sensor.") &&
+        hass.states[id].attributes &&
+        Array.isArray(hass.states[id].attributes.rezepte)
+    ) || ""
+  );
+}
+
+class TandoorKochlisteCard extends HTMLElement {
+  static getConfigElement() {
+    return document.createElement("tandoor-kochliste-card-editor");
+  }
+
+  static getStubConfig(hass) {
+    return { entity: tandoorFindKochlisteSensor(hass) };
+  }
+
+  setConfig(config) {
+    this._config = Object.assign({}, TANDOOR_KOCHLISTE_DEFAULTS, config);
+    this._lastKey = null;
+  }
+
+  getCardSize() {
+    return 4;
+  }
+
+  _esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
+  _entityId() {
+    return (this._config && this._config.entity) || this._autoEntity || "";
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (this._config && !this._config.entity && !this._autoEntity) {
+      this._autoEntity = tandoorFindKochlisteSensor(hass);
+    }
+    const st = hass.states[this._entityId()];
+    const key = st ? st.last_updated + "|" + st.state : "missing";
+    if (key === this._lastKey) return;
+    this._lastKey = key;
+    // Nicht neu rendern, solange ein Dialog offen ist — sonst würde er weggerissen.
+    if (this._dialogOpen) {
+      this._pendingRender = st;
+      return;
+    }
+    try {
+      this._render(st);
+    } catch (err) {
+      if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+      this.shadowRoot.innerHTML = `<ha-card style="padding:12px 16px 16px"><div style="color:var(--secondary-text-color);font-style:italic">Kochliste-Karte: Anzeige fehlgeschlagen (${this._esc((err && err.message) || err)})</div></ha-card>`;
+    }
+  }
+
+  _row(r) {
+    const einkaufen = r.status === "einkaufen";
+    const img = r.bild
+      ? `<div class="kimg" style="background-image:url('${this._esc(r.bild)}')"></div>`
+      : `<div class="kimg noimg"><ha-icon icon="mdi:chef-hat"></ha-icon></div>`;
+    const chip = einkaufen
+      ? `<span class="kchip einkaufen">🛒 einkaufen</span>`
+      : `<span class="kchip kochbar">kochbar</span>`;
+    const action = einkaufen
+      ? `<button class="kbtn shoplink"><ha-icon icon="mdi:cart-outline"></ha-icon>Einkaufsliste</button>`
+      : `<button class="kbtn gekocht" data-id="${this._esc(r.id)}" data-recipe-id="${r.recipe_id != null ? this._esc(String(r.recipe_id)) : ""}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
+    return `
+      <div class="krow ${einkaufen ? "dim" : ""}">
+        ${img}
+        <div class="kmain">
+          <div class="ktitel">${this._esc(r.titel)}</div>
+          <div class="kchips">${chip}</div>
+        </div>
+        ${action}
+      </div>`;
+  }
+
+  _doneRow(r) {
+    let when = "";
+    if (r.gekocht_am) {
+      const d = new Date(r.gekocht_am);
+      if (!isNaN(d)) {
+        when = " · " + d.toLocaleDateString(undefined, { day: "numeric", month: "long" });
+      }
+    }
+    return `<div class="kdone">✓ ${this._esc(r.titel)}${this._esc(when)}</div>`;
+  }
+
+  _render(st) {
+    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
+    const c = this._config;
+
+    let content;
+    try {
+      if (!st) {
+        content = `<div class="leer">Kochliste-Sensor ${this._entityId() ? `<b>${this._esc(this._entityId())}</b> nicht gefunden` : "nicht gefunden (Option essensplan_url der Tandoor-Integration prüfen)"}.</div>`;
+      } else {
+        const rezepte =
+          st.attributes && Array.isArray(st.attributes.rezepte)
+            ? st.attributes.rezepte.filter((r) => r && typeof r === "object")
+            : [];
+        const offen = rezepte.filter((r) => r.status !== "gekocht");
+        // Kochbare zuerst, Einkaufs-Kandidaten (gedimmt) darunter.
+        offen.sort((a, b) => (a.status === "einkaufen") - (b.status === "einkaufen"));
+        const maxAge = (Number(c.gekocht_tage) || 3) * 86400000;
+        const done = c.show_gekocht
+          ? rezepte.filter((r) => {
+              if (r.status !== "gekocht" || !r.gekocht_am) return false;
+              const d = new Date(r.gekocht_am);
+              return !isNaN(d) && Date.now() - d.getTime() <= maxAge;
+            })
+          : [];
+        content =
+          (offen.length
+            ? offen.map((r) => this._row(r)).join("")
+            : `<div class="leer">Kochliste ist leer — alles gekocht! 🎉</div>`) +
+          (done.length ? `<div class="kdones">${done.map((r) => this._doneRow(r)).join("")}</div>` : "");
+      }
+    } catch (err) {
+      // Nie die HA-Fehlerkarte auslösen — lieber lesbare Meldung in der Karte zeigen.
+      content = `<div class="leer">Anzeige fehlgeschlagen: ${this._esc((err && err.message) || err)}</div>`;
+    }
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        ha-card { padding: 12px 16px 16px; }
+        .titel { font-size: var(--ha-card-header-font-size, 22px); color: var(--ha-card-header-color, var(--primary-text-color)); padding: 4px 0 8px; display: flex; align-items: center; gap: 8px; }
+        .titel ha-icon { color: var(--accent-color, #ff9800); }
+        .krow { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--divider-color); }
+        .krow:last-of-type { border-bottom: 0; }
+        .krow.dim .kimg, .krow.dim .ktitel { opacity: 0.55; }
+        .kimg { width: 60px; height: 60px; flex: 0 0 60px; border-radius: 50%; background-size: cover; background-position: center; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+        .kimg.noimg { display: flex; align-items: center; justify-content: center; background: var(--secondary-background-color); color: var(--disabled-text-color); --mdc-icon-size: 28px; }
+        .kmain { flex: 1 1 auto; min-width: 0; }
+        .ktitel { font-weight: 600; font-size: 14px; line-height: 1.25; color: var(--primary-text-color); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .kchips { margin-top: 4px; }
+        .kchip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; border-radius: 10px; padding: 1px 8px; background: var(--divider-color); color: var(--secondary-text-color); }
+        .kchip.einkaufen { background: rgba(255, 152, 0, 0.18); color: var(--accent-color, #ff9800); }
+        .kbtn { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; --mdc-icon-size: 17px; }
+        .kbtn.gekocht { background: rgba(76, 175, 80, 0.9); color: #fff; }
+        .kbtn.gekocht:disabled { opacity: 0.5; cursor: default; }
+        .kbtn.shoplink { background: var(--divider-color); color: var(--secondary-text-color); font-weight: 400; }
+        .kdones { margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--divider-color); }
+        .kdone { font-size: 12px; color: var(--secondary-text-color); padding: 2px 0; }
+        .leer { color: var(--secondary-text-color); font-style: italic; padding: 4px 0 8px; }
+        .kwarn { color: var(--error-color, #f44336); font-size: 12px; padding: 4px 0; }
+        .tdlg-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: flex-start; justify-content: center; z-index: 9; padding: 24px 12px; overflow-y: auto; }
+        .tdlg { background: var(--ha-card-background, var(--card-background-color, #fff)); color: var(--primary-text-color); border-radius: 16px; max-width: 420px; width: 100%; box-shadow: 0 8px 40px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+        .tdlg-x { position: absolute; top: 8px; right: 8px; z-index: 3; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.5); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
+        .tdlg-body { padding: 16px 18px 20px; }
+        .tdlg-body h2 { margin: 0 24px 6px 0; font-size: 19px; line-height: 1.25; }
+        .klbl { color: var(--secondary-text-color); font-size: 13px; margin: 0 0 6px; }
+        .tdlg-rate { display: flex; align-items: center; gap: 4px; margin: 10px 0; --mdc-icon-size: 34px; }
+        .tdlg-rate ha-icon { color: #ffca28; cursor: pointer; }
+        .kcomment { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--divider-color); background: var(--secondary-background-color); color: var(--primary-text-color); font: inherit; font-size: 14px; resize: vertical; }
+        .tdlg-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .tdlg-btn { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 10px; padding: 9px 14px; font-size: 14px; cursor: pointer; background: var(--primary-color, #03a9f4); color: var(--text-primary-color, #fff); --mdc-icon-size: 18px; }
+        .tdlg-btn.sec { background: var(--divider-color); color: var(--primary-text-color); }
+      </style>
+      <ha-card>
+        ${c.title ? `<div class="titel"><ha-icon icon="mdi:chef-hat"></ha-icon>${this._esc(c.title)}</div>` : ""}
+        ${content}
+      </ha-card>
+      <div class="tdlg-backdrop" style="display:none">
+        <div class="tdlg"><button class="tdlg-x" aria-label="Schließen">✕</button><div class="tdlg-content"></div></div>
+      </div>`;
+
+    const back = this.shadowRoot.querySelector(".tdlg-backdrop");
+    if (back) {
+      back.addEventListener("click", (ev) => { if (ev.target === back) this._closeDialog(); });
+      back.querySelector(".tdlg-x").addEventListener("click", () => this._closeDialog());
+    }
+    this.shadowRoot.querySelectorAll(".kbtn.gekocht").forEach((el) => {
+      el.addEventListener("click", () => this._onGekocht(el));
+    });
+    this.shadowRoot.querySelectorAll(".kbtn.shoplink").forEach((el) => {
+      el.addEventListener("click", () => {
+        const base = String(this._config.essensplan_url || "").replace(/\/+$/, "");
+        if (/^https?:\/\//i.test(base)) window.open(base + "/einkauf.php", "_blank", "noopener");
+      });
+    });
+  }
+
+  _showWarn(text) {
+    const card = this.shadowRoot && this.shadowRoot.querySelector("ha-card");
+    if (!card) return;
+    const warn = document.createElement("div");
+    warn.className = "kwarn";
+    warn.textContent = text;
+    card.appendChild(warn);
+  }
+
+  async _onGekocht(btn) {
+    const id = btn.dataset.id || "";
+    const titel = btn.dataset.titel || "";
+    const recipeId = btn.dataset.recipeId || "";
+    if (!id) return;
+    if (this._config.confirm_gekocht && !window.confirm(`„${titel}“ als gekocht markieren?`)) return;
+    btn.disabled = true;
+    try {
+      await this._hass.callService("tandoor", "kochliste_gekocht", { id });
+    } catch (err) {
+      btn.disabled = false;
+      this._showWarn("Abhaken fehlgeschlagen: " + ((err && err.message) || err));
+      return;
+    }
+    // Sterne-Dialog nur für Rezepte, die in Tandoor existieren (recipe_id).
+    if (recipeId) this._openSterneDialog(recipeId, titel);
+  }
+
+  _openSterneDialog(recipeId, titel) {
+    this._sterne = 0;
+    this._openDialog(`
+      <div class="tdlg-body">
+        <h2>${this._esc(titel)}</h2>
+        <p class="klbl">Wie hat es geschmeckt?</p>
+        <div class="tdlg-rate">${this._starPicker(0)}</div>
+        <textarea class="kcomment" rows="2" placeholder="Kommentar (optional)"></textarea>
+        <div class="tdlg-actions">
+          <button class="tdlg-btn sec k-later">Später</button>
+          <button class="tdlg-btn k-save">Speichern</button>
+        </div>
+      </div>`);
+    const root = this.shadowRoot.querySelector(".tdlg-content");
+    if (!root) return;
+    root.querySelectorAll(".tdlg-rate ha-icon[data-val]").forEach((el) => {
+      el.addEventListener("click", () => {
+        this._sterne = Number(el.dataset.val) || 0;
+        root.querySelectorAll(".tdlg-rate ha-icon[data-val]").forEach((s) => {
+          s.setAttribute("icon", Number(s.dataset.val) <= this._sterne ? "mdi:star" : "mdi:star-outline");
+        });
+      });
+    });
+    root.querySelector(".k-later").addEventListener("click", () => this._closeDialog());
+    root.querySelector(".k-save").addEventListener("click", async () => {
+      const kommentar = (root.querySelector(".kcomment").value || "").trim();
+      try {
+        await this._hass.callService("tandoor", "kochliste_bewerten", {
+          recipe_id: Number(recipeId),
+          sterne: this._sterne,
+          kommentar,
+        });
+      } catch (err) {
+        const warn = document.createElement("div");
+        warn.className = "kwarn";
+        warn.textContent = "Bewertung fehlgeschlagen: " + ((err && err.message) || err);
+        root.appendChild(warn);
+        return;
+      }
+      this._closeDialog();
+    });
+  }
+
+  _starPicker(rating) {
+    const r = Math.round(Number(rating) || 0);
+    let out = "";
+    for (let i = 1; i <= 5; i++) {
+      out += `<ha-icon data-val="${i}" icon="${i <= r ? "mdi:star" : "mdi:star-outline"}"></ha-icon>`;
+    }
+    return out;
+  }
+
+  _openDialog(html) {
+    const back = this.shadowRoot && this.shadowRoot.querySelector(".tdlg-backdrop");
+    const content = back && back.querySelector(".tdlg-content");
+    if (!back || !content) return;
+    content.innerHTML = html;
+    back.style.display = "flex";
+    this._dialogOpen = true;
+    if (!this._onKey) {
+      this._onKey = (ev) => { if (ev.key === "Escape") this._closeDialog(); };
+    }
+    document.addEventListener("keydown", this._onKey);
+  }
+
+  _closeDialog() {
+    const back = this.shadowRoot && this.shadowRoot.querySelector(".tdlg-backdrop");
+    if (back) back.style.display = "none";
+    this._dialogOpen = false;
+    if (this._onKey) document.removeEventListener("keydown", this._onKey);
+    if (this._pendingRender !== undefined) {
+      const st = this._pendingRender;
+      this._pendingRender = undefined;
+      this._render(st);
+    }
+  }
+}
+
+class TandoorKochlisteCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = Object.assign({}, TANDOOR_KOCHLISTE_DEFAULTS, config);
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  _labels(lang) {
+    const de = {
+      entity: "Kochliste-Sensor (Tandoor „Kochliste“)",
+      title: "Titel",
+      essensplan_url: "Essensplan-URL (für den Einkaufslisten-Link)",
+      show_gekocht: "Gekochte der letzten Tage anzeigen",
+      gekocht_tage: "Gekochte anzeigen für (Tage)",
+      confirm_gekocht: "Vor dem Abhaken nachfragen",
+    };
+    const en = {
+      entity: "Kochliste sensor (Tandoor 'Kochliste')",
+      title: "Title",
+      essensplan_url: "Essensplan URL (for the shopping list link)",
+      show_gekocht: "Show recently cooked recipes",
+      gekocht_tage: "Show cooked for (days)",
+      confirm_gekocht: "Confirm before marking as cooked",
+    };
+    return String(lang || "").startsWith("de") ? de : en;
+  }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+    if (!this._form) {
+      this._form = document.createElement("ha-form");
+      this._form.addEventListener("value-changed", (e) => {
+        const config = { type: "custom:tandoor-kochliste-card", ...e.detail.value };
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            detail: { config },
+            bubbles: true,
+            composed: true,
+          })
+        );
+      });
+      this.appendChild(this._form);
+    }
+    const labels = this._labels(this._hass.language);
+    this._form.hass = this._hass;
+    this._form.data = this._config;
+    this._form.schema = [
+      {
+        name: "entity",
+        selector: { entity: { domain: "sensor", integration: "tandoor" } },
+      },
+      { name: "title", selector: { text: {} } },
+      { name: "essensplan_url", selector: { text: {} } },
+      { name: "show_gekocht", selector: { boolean: {} } },
+      {
+        name: "gekocht_tage",
+        selector: { number: { min: 1, max: 14, mode: "slider" } },
+      },
+      { name: "confirm_gekocht", selector: { boolean: {} } },
+    ];
+    this._form.computeLabel = (schema) => labels[schema.name] || schema.name;
+  }
+}
+
 // Doppelte Registrierung (z.B. Modul zusätzlich als manuelle Lovelace-Ressource
 // geladen) darf keinen Top-Level-Fehler werfen, sonst wird das Element ggf. gar
 // nicht definiert → "custom element doesn't exist" (rotes Kästchen).
@@ -544,12 +929,26 @@ if (!customElements.get("tandoor-mealplan-card")) {
 if (!customElements.get("tandoor-mealplan-card-editor")) {
   customElements.define("tandoor-mealplan-card-editor", TandoorMealplanCardEditor);
 }
+if (!customElements.get("tandoor-kochliste-card")) {
+  customElements.define("tandoor-kochliste-card", TandoorKochlisteCard);
+}
+if (!customElements.get("tandoor-kochliste-card-editor")) {
+  customElements.define("tandoor-kochliste-card-editor", TandoorKochlisteCardEditor);
+}
 window.customCards = window.customCards || [];
 if (!window.customCards.some((c) => c.type === "tandoor-mealplan-card")) {
   window.customCards.push({
     type: "tandoor-mealplan-card",
     name: "Tandoor Mealplan Card",
     description: "Meal plan from Tandoor Recipes with recipe images (needs the ha-tandoor integration)",
+    preview: true,
+  });
+}
+if (!window.customCards.some((c) => c.type === "tandoor-kochliste-card")) {
+  window.customCards.push({
+    type: "tandoor-kochliste-card",
+    name: "Tandoor Kochliste Card",
+    description: "Kochliste (cooking backlog) of the Essensplan website with cooked check-off and star rating (needs the ha-tandoor integration)",
     preview: true,
   });
 }

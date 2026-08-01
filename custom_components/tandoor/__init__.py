@@ -10,14 +10,22 @@ from homeassistant.const import CONF_API_TOKEN, CONF_URL, CONF_VERIFY_SSL, Platf
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import TandoorClient
-from .const import DOMAIN, FRONTEND_URL, FRONTEND_VERSION
+from .api import EssensplanClient, TandoorClient
+from .const import (
+    CONF_ESSENSPLAN_URL,
+    DEFAULT_ESSENSPLAN_URL,
+    DOMAIN,
+    FRONTEND_URL,
+    FRONTEND_VERSION,
+)
 from .coordinator import (
     TandoorConfigEntry,
     TandoorData,
+    TandoorKochlisteCoordinator,
     TandoorMealplanCoordinator,
     TandoorShoppingCoordinator,
 )
+from .services import async_register_services
 from .websocket import async_register_websocket_api
 
 PLATFORMS: list[Platform] = [Platform.CALENDAR, Platform.SENSOR, Platform.TODO]
@@ -48,10 +56,18 @@ def _register_websocket_api(hass: HomeAssistant) -> None:
     hass.data[f"{DOMAIN}_ws_registered"] = True
 
 
+async def _async_update_listener(
+    hass: HomeAssistant, entry: TandoorConfigEntry
+) -> None:
+    """Reload the entry when options (e.g. essensplan_url) change."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: TandoorConfigEntry) -> bool:
     """Set up Tandoor from a config entry."""
     await _async_register_frontend(hass)
     _register_websocket_api(hass)
+    async_register_services(hass)
 
     client = TandoorClient(
         base_url=entry.data[CONF_URL],
@@ -66,10 +82,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: TandoorConfigEntry) -> b
     await shopping.async_config_entry_first_refresh()
     await mealplan.async_config_entry_first_refresh()
 
+    # Optional Kochliste feature (Essensplan website, not Tandoor). An empty
+    # URL disables it; an unreachable API must never fail the setup — the
+    # coordinator just logs and keeps retrying.
+    kochliste: TandoorKochlisteCoordinator | None = None
+    essensplan_url = (
+        entry.options.get(CONF_ESSENSPLAN_URL, DEFAULT_ESSENSPLAN_URL) or ""
+    ).strip()
+    if essensplan_url:
+        essensplan = EssensplanClient(
+            base_url=essensplan_url, session=async_get_clientsession(hass)
+        )
+        kochliste = TandoorKochlisteCoordinator(hass, entry, essensplan)
+        await kochliste.async_refresh()
+
     entry.runtime_data = TandoorData(
-        client=client, shopping=shopping, mealplan=mealplan
+        client=client, shopping=shopping, mealplan=mealplan, kochliste=kochliste
     )
 
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

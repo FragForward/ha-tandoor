@@ -22,6 +22,59 @@
       "already_configured": "Diese Tandoor-Instanz ist bereits eingerichtet."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Optional: die Kochliste der Essensplan-Website anbinden. URL leer lassen, um das Feature zu deaktivieren.",
+        "data": {
+          "essensplan_url": "Essensplan-URL"
+        },
+        "data_description": {
+          "essensplan_url": "Basis-URL der Essensplan-Website, z. B. http://192.168.1.4:8091. Leer = Kochliste deaktiviert."
+        }
+      }
+    }
+  },
+  "services": {
+    "kochliste_gekocht": {
+      "name": "Kochliste: als gekocht markieren",
+      "description": "Hakt ein Kochlisten-Rezept ab (legt außerdem den heutigen Essensplan-Eintrag in Tandoor an).",
+      "fields": {
+        "id": {
+          "name": "Kochlisten-ID",
+          "description": "Die ID des Kochlisten-Eintrags, z. B. k7 (siehe Attribut rezepte des Kochliste-Sensors)."
+        }
+      }
+    },
+    "kochliste_kochbar": {
+      "name": "Kochliste: als kochbar markieren",
+      "description": "Setzt ein Kochlisten-Rezept von „einkaufen“ auf „kochbar“.",
+      "fields": {
+        "id": {
+          "name": "Kochlisten-ID",
+          "description": "Die ID des Kochlisten-Eintrags, z. B. k7 (siehe Attribut rezepte des Kochliste-Sensors)."
+        }
+      }
+    },
+    "kochliste_bewerten": {
+      "name": "Kochliste: Rezept bewerten",
+      "description": "Bewertet ein Tandoor-Rezept mit 0-5 Sternen und optionalem Kommentar (0 = Bewertung löschen).",
+      "fields": {
+        "recipe_id": {
+          "name": "Rezept-ID",
+          "description": "Die Tandoor-Rezept-ID."
+        },
+        "sterne": {
+          "name": "Sterne",
+          "description": "Bewertung von 0 bis 5 Sternen (0 löscht die Bewertung)."
+        },
+        "kommentar": {
+          "name": "Kommentar",
+          "description": "Optionaler Kommentar für das Koch-Log."
+        }
+      }
+    }
+  },
   "entity": {
     "todo": {
       "shopping_list": {
@@ -42,6 +95,9 @@
       },
       "shopping_items": {
         "name": "Offene Einkäufe"
+      },
+      "kochliste": {
+        "name": "Kochliste"
       }
     }
   }

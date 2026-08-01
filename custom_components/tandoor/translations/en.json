@@ -22,6 +22,59 @@
       "already_configured": "This Tandoor instance is already configured."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Optional: connect the Kochliste (cooking backlog) of the Essensplan website. Leave the URL empty to disable the feature.",
+        "data": {
+          "essensplan_url": "Essensplan URL"
+        },
+        "data_description": {
+          "essensplan_url": "Base URL of the Essensplan website, e.g. http://192.168.1.4:8091. Empty = Kochliste disabled."
+        }
+      }
+    }
+  },
+  "services": {
+    "kochliste_gekocht": {
+      "name": "Kochliste: mark as cooked",
+      "description": "Marks a Kochliste recipe as cooked (also creates today's meal plan entry in Tandoor).",
+      "fields": {
+        "id": {
+          "name": "Kochliste ID",
+          "description": "The Kochliste item ID, e.g. k7 (see the rezepte attribute of the Kochliste sensor)."
+        }
+      }
+    },
+    "kochliste_kochbar": {
+      "name": "Kochliste: mark as cookable",
+      "description": "Moves a Kochliste recipe from 'shopping needed' to 'cookable'.",
+      "fields": {
+        "id": {
+          "name": "Kochliste ID",
+          "description": "The Kochliste item ID, e.g. k7 (see the rezepte attribute of the Kochliste sensor)."
+        }
+      }
+    },
+    "kochliste_bewerten": {
+      "name": "Kochliste: rate recipe",
+      "description": "Rates a Tandoor recipe with 0-5 stars and an optional comment (0 = remove rating).",
+      "fields": {
+        "recipe_id": {
+          "name": "Recipe ID",
+          "description": "The Tandoor recipe ID."
+        },
+        "sterne": {
+          "name": "Stars",
+          "description": "Rating from 0 to 5 stars (0 removes the rating)."
+        },
+        "kommentar": {
+          "name": "Comment",
+          "description": "Optional comment for the cook log."
+        }
+      }
+    }
+  },
   "entity": {
     "todo": {
       "shopping_list": {
@@ -42,6 +95,9 @@
       },
       "shopping_items": {
         "name": "Open shopping items"
+      },
+      "kochliste": {
+        "name": "Kochliste"
       }
     }
   }

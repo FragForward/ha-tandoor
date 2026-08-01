@@ -14,6 +14,7 @@ from .api import MealPlanEntry
 from .const import MEALPLAN_DAYS
 from .coordinator import (
     TandoorConfigEntry,
+    TandoorKochlisteCoordinator,
     TandoorMealplanCoordinator,
     TandoorShoppingCoordinator,
 )
@@ -53,13 +54,14 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    async_add_entities(
-        [
-            TandoorMealplanSensor(entry, "mealplan_today", 0, include_week=True),
-            TandoorMealplanSensor(entry, "mealplan_tomorrow", 1),
-            TandoorShoppingCountSensor(entry),
-        ]
-    )
+    entities: list[SensorEntity] = [
+        TandoorMealplanSensor(entry, "mealplan_today", 0, include_week=True),
+        TandoorMealplanSensor(entry, "mealplan_tomorrow", 1),
+        TandoorShoppingCountSensor(entry),
+    ]
+    if entry.runtime_data.kochliste is not None:
+        entities.append(TandoorKochlisteSensor(entry))
+    async_add_entities(entities)
 
 
 class TandoorMealplanSensor(TandoorEntity, SensorEntity):
@@ -125,3 +127,40 @@ class TandoorShoppingCountSensor(TandoorEntity, SensorEntity):
     def native_value(self) -> int:
         """Count of unchecked entries."""
         return sum(1 for e in self.coordinator.data or [] if not e.checked)
+
+
+class TandoorKochlisteSensor(TandoorEntity, SensorEntity):
+    """Number of open (not yet cooked) Kochliste recipes.
+
+    Carries the whole Kochliste (attribute 'rezepte') and the batch number so
+    the bundled tandoor-kochliste-card can render it.
+    """
+
+    _attr_translation_key = "kochliste"
+
+    coordinator: TandoorKochlisteCoordinator
+
+    def __init__(self, entry: TandoorConfigEntry) -> None:
+        """Initialize the sensor."""
+        super().__init__(entry.runtime_data.kochliste, entry, "kochliste")
+
+    @property
+    def native_value(self) -> int | None:
+        """Count of recipes that are not cooked yet."""
+        data = self.coordinator.data
+        if data is None:
+            return None
+        return sum(
+            1
+            for r in data.get("rezepte") or []
+            if isinstance(r, dict) and r.get("status") != "gekocht"
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Full recipe list and batch number for the dashboard card."""
+        data = self.coordinator.data or {}
+        return {
+            "batch": data.get("batch"),
+            "rezepte": data.get("rezepte") or [],
+        }

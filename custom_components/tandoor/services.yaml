@@ -1,0 +1,40 @@
+kochliste_gekocht:
+  fields:
+    id:
+      required: true
+      example: k7
+      selector:
+        text:
+
+kochliste_kochbar:
+  fields:
+    id:
+      required: true
+      example: k7
+      selector:
+        text:
+
+kochliste_bewerten:
+  fields:
+    recipe_id:
+      required: true
+      example: 62
+      selector:
+        number:
+          min: 1
+          max: 1000000
+          mode: box
+    sterne:
+      required: true
+      example: 4
+      selector:
+        number:
+          min: 0
+          max: 5
+          mode: slider
+    kommentar:
+      required: false
+      example: "Sehr lecker, nächstes Mal mehr Sauce"
+      selector:
+        text:
+          multiline: true
