@@ -1,4 +1,4 @@
-﻿/* Tandoor Mealplan Card v0.5.1
+﻿/* Tandoor Mealplan Card v0.5.2
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.1
+/* Tandoor Kochliste Card v0.5.2
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -628,7 +628,7 @@ class TandoorKochlisteCard extends HTMLElement {
       ? `<span class="kchip einkaufen">🛒 einkaufen</span>`
       : `<span class="kchip kochbar">kochbar</span>`;
     const action = einkaufen
-      ? `<button class="kbtn shoplink"><ha-icon icon="mdi:cart-outline"></ha-icon>Einkaufsliste</button>`
+      ? `<button class="kbtn eingekauft" data-id="${this._esc(r.id)}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:cart-check"></ha-icon>Eingekauft ✓</button>`
       : `<button class="kbtn gekocht" data-id="${this._esc(r.id)}" data-recipe-id="${r.recipe_id != null ? this._esc(String(r.recipe_id)) : ""}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
     return `
       <div class="krow ${einkaufen ? "dim" : ""}">
@@ -666,8 +666,8 @@ class TandoorKochlisteCard extends HTMLElement {
             ? st.attributes.rezepte.filter((r) => r && typeof r === "object")
             : [];
         const offen = rezepte.filter((r) => r.status !== "gekocht");
-        // Kochbare zuerst, Einkaufs-Kandidaten (gedimmt) darunter.
-        offen.sort((a, b) => (a.status === "einkaufen") - (b.status === "einkaufen"));
+        const kochbar = offen.filter((r) => r.status !== "einkaufen");
+        const einkaufen = offen.filter((r) => r.status === "einkaufen");
         const maxAge = (Number(c.gekocht_tage) || 3) * 86400000;
         const done = c.show_gekocht
           ? rezepte.filter((r) => {
@@ -676,10 +676,16 @@ class TandoorKochlisteCard extends HTMLElement {
               return !isNaN(d) && Date.now() - d.getTime() <= maxAge;
             })
           : [];
+        // Einkaufs-Fortschritt: wie viele der offenen Rezepte sind schon eingekauft?
+        const einkaufBlock = einkaufen.length
+          ? `<div class="ksub"><span>🛒 Zum Einkaufen · <b>${kochbar.length}/${offen.length}</b> eingekauft</span><button class="kbtn shoplink"><ha-icon icon="mdi:cart-outline"></ha-icon>Einkaufsliste</button></div>` +
+            einkaufen.map((r) => this._row(r)).join("")
+          : "";
         content =
-          (offen.length
-            ? offen.map((r) => this._row(r)).join("")
-            : `<div class="leer">Kochliste ist leer — alles gekocht! 🎉</div>`) +
+          (kochbar.length
+            ? kochbar.map((r) => this._row(r)).join("")
+            : `<div class="leer">${offen.length ? "Noch nichts kochbar — erst einkaufen 🛒" : "Kochliste ist leer — alles gekocht! 🎉"}</div>`) +
+          einkaufBlock +
           (done.length ? `<div class="kdones">${done.map((r) => this._doneRow(r)).join("")}</div>` : "");
       }
     } catch (err) {
@@ -706,6 +712,10 @@ class TandoorKochlisteCard extends HTMLElement {
         .kbtn.gekocht { background: rgba(76, 175, 80, 0.9); color: #fff; }
         .kbtn.gekocht:disabled { opacity: 0.5; cursor: default; }
         .kbtn.shoplink { background: var(--divider-color); color: var(--secondary-text-color); font-weight: 400; }
+        .kbtn.eingekauft { background: rgba(255, 152, 0, 0.85); color: #fff; }
+        .kbtn.eingekauft:disabled { opacity: 0.5; cursor: default; }
+        .ksub { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding: 6px 0 2px; border-top: 1px solid var(--divider-color); font-size: 13px; color: var(--secondary-text-color); }
+        .ksub .kbtn { padding: 5px 10px; font-size: 12px; }
         .kdones { margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--divider-color); }
         .kdone { font-size: 12px; color: var(--secondary-text-color); padding: 2px 0; }
         .leer { color: var(--secondary-text-color); font-style: italic; padding: 4px 0 8px; }
@@ -739,6 +749,9 @@ class TandoorKochlisteCard extends HTMLElement {
     this.shadowRoot.querySelectorAll(".kbtn.gekocht").forEach((el) => {
       el.addEventListener("click", () => this._onGekocht(el));
     });
+    this.shadowRoot.querySelectorAll(".kbtn.eingekauft").forEach((el) => {
+      el.addEventListener("click", () => this._onEingekauft(el));
+    });
     this.shadowRoot.querySelectorAll(".kbtn.shoplink").forEach((el) => {
       el.addEventListener("click", () => {
         const base = String(this._config.essensplan_url || "").replace(/\/+$/, "");
@@ -754,6 +767,20 @@ class TandoorKochlisteCard extends HTMLElement {
     warn.className = "kwarn";
     warn.textContent = text;
     card.appendChild(warn);
+  }
+
+  async _onEingekauft(btn) {
+    const id = btn.dataset.id || "";
+    const titel = btn.dataset.titel || "";
+    if (!id) return;
+    if (!window.confirm(`„${titel}“ als eingekauft markieren? Es wird damit kochbar.`)) return;
+    btn.disabled = true;
+    try {
+      await this._hass.callService("tandoor", "kochliste_kochbar", { id });
+    } catch (err) {
+      btn.disabled = false;
+      this._showWarn("Markieren fehlgeschlagen: " + ((err && err.message) || err));
+    }
   }
 
   async _onGekocht(btn) {
