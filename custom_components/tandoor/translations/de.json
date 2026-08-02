@@ -58,6 +58,16 @@
         }
       }
     },
+    "kochliste_bring": {
+      "name": "Kochliste: auf die Einkaufsliste",
+      "description": "Setzt die Zutaten eines Rezepts auf die Einkaufsliste (z. B. Bring) und markiert das Rezept als „auf der Einkaufsliste“.",
+      "fields": {
+        "id": {
+          "name": "Kochlisten-ID",
+          "description": "Die ID des Kochlisten-Eintrags, z. B. k7 (siehe Attribut rezepte des Kochliste-Sensors)."
+        }
+      }
+    },
     "kochliste_bewerten": {
       "name": "Kochliste: Rezept bewerten",
       "description": "Bewertet ein Tandoor-Rezept mit 0-5 Sternen und optionalem Kommentar (0 = Bewertung löschen).",

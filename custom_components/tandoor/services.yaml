@@ -14,6 +14,14 @@ kochliste_kochbar:
       selector:
         text:
 
+kochliste_bring:
+  fields:
+    id:
+      required: true
+      example: k7
+      selector:
+        text:
+
 kochliste_bewerten:
   fields:
     recipe_id:
