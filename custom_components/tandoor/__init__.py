@@ -11,7 +11,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import EssensplanClient, TandoorClient
+from .bring_sync import TandoorBringSync
 from .const import (
+    CONF_BRING_ENTITY,
     CONF_ESSENSPLAN_URL,
     DEFAULT_ESSENSPLAN_URL,
     DOMAIN,
@@ -95,6 +97,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: TandoorConfigEntry) -> b
         )
         kochliste = TandoorKochlisteCoordinator(hass, entry, essensplan)
         await kochliste.async_refresh()
+
+        # Optional Bring return channel: watch the Bring todo list and mark
+        # recipes cookable once all their sent ingredients are checked off.
+        bring_entity = (entry.options.get(CONF_BRING_ENTITY) or "").strip()
+        if bring_entity:
+            bring_sync = TandoorBringSync(hass, essensplan, bring_entity, kochliste)
+            bring_sync.async_setup()
+            entry.async_on_unload(bring_sync.async_teardown)
 
     entry.runtime_data = TandoorData(
         client=client, shopping=shopping, mealplan=mealplan, kochliste=kochliste

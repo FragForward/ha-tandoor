@@ -392,6 +392,13 @@ class EssensplanClient:
                 f"aktion={aktion} failed: {data.get('fehler') or data}"
             )
 
+    async def einkauf(self) -> dict[str, Any]:
+        """Return the shopping data (recipes, ingredients, bring markers)."""
+        data = await self._request("POST", "einkauf", json={})
+        if not isinstance(data, dict):
+            raise EssensplanError("einkauf response is not an object")
+        return data
+
     async def kochliste_gekocht(self, item_id: str) -> None:
         """Mark a Kochliste item as cooked (also logs it in Tandoor's plan)."""
         await self._post_ok("gekocht", {"id": item_id})
