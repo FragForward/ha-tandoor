@@ -1,10 +1,10 @@
-"""Constants for the Tandoor integration."""
+﻿"""Constants for the Tandoor integration."""
 
 from datetime import timedelta
 
 DOMAIN = "tandoor"
 
-FRONTEND_VERSION = "0.5.0"
+FRONTEND_VERSION = "0.5.1"
 FRONTEND_URL = f"/{DOMAIN}-frontend/tandoor-mealplan-card.js"
 
 SHOPPING_UPDATE_INTERVAL = timedelta(seconds=60)
