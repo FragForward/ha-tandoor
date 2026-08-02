@@ -21,6 +21,7 @@ from .coordinator import TandoorConfigEntry
 SERVICE_KOCHLISTE_GEKOCHT = "kochliste_gekocht"
 SERVICE_KOCHLISTE_KOCHBAR = "kochliste_kochbar"
 SERVICE_KOCHLISTE_BEWERTEN = "kochliste_bewerten"
+SERVICE_KOCHLISTE_BRING = "kochliste_bring"
 
 KOCHLISTE_ID_SCHEMA = vol.Schema({vol.Required("id"): cv.string})
 KOCHLISTE_BEWERTEN_SCHEMA = vol.Schema(
@@ -76,6 +77,17 @@ def async_register_services(hass: HomeAssistant) -> None:
             raise HomeAssistantError(f"Kochliste kochbar failed: {err}") from err
         await _refresh(entry)
 
+    async def handle_bring(call: ServiceCall) -> None:
+        """Send one recipe's shopping items to the shopping list (Bring)."""
+        entry = _kochliste_entry(hass)
+        try:
+            await entry.runtime_data.kochliste.client.rezept_bring(
+                call.data["id"]
+            )
+        except EssensplanError as err:
+            raise HomeAssistantError(f"Kochliste bring failed: {err}") from err
+        await _refresh(entry)
+
     async def handle_bewerten(call: ServiceCall) -> None:
         """Rate a recipe 0-5 stars with an optional comment."""
         entry = _kochliste_entry(hass)
@@ -102,4 +114,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_KOCHLISTE_BEWERTEN,
         handle_bewerten,
         schema=KOCHLISTE_BEWERTEN_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_KOCHLISTE_BRING, handle_bring, schema=KOCHLISTE_ID_SCHEMA
     )

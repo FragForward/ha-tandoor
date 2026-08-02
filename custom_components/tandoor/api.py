@@ -407,6 +407,10 @@ class EssensplanClient:
         """Move a Kochliste item from 'einkaufen' to 'kochbar'."""
         await self._post_ok("kochbar", {"id": item_id})
 
+    async def rezept_bring(self, item_id: str) -> None:
+        """Send one recipe's shopping items to the shopping list (Bring)."""
+        await self._post_ok("rezept_bring", {"id": item_id})
+
     async def rezept_stern(
         self, recipe_id: int, sterne: int, kommentar: str | None = None
     ) -> None:

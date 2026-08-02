@@ -58,6 +58,16 @@
         }
       }
     },
+    "kochliste_bring": {
+      "name": "Kochliste: send to shopping list",
+      "description": "Sends one recipe's shopping items to the shopping list (e.g. Bring) and marks the recipe as 'on the shopping list'.",
+      "fields": {
+        "id": {
+          "name": "Kochliste ID",
+          "description": "The Kochliste item ID, e.g. k7 (see the rezepte attribute of the Kochliste sensor)."
+        }
+      }
+    },
     "kochliste_bewerten": {
       "name": "Kochliste: rate recipe",
       "description": "Rates a Tandoor recipe with 0-5 stars and an optional comment (0 = remove rating).",
