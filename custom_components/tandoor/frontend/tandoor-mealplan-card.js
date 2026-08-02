@@ -1,4 +1,4 @@
-﻿/* Tandoor Mealplan Card v0.5.2
+﻿/* Tandoor Mealplan Card v0.5.3
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.2
+/* Tandoor Kochliste Card v0.5.3
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -621,6 +621,7 @@ class TandoorKochlisteCard extends HTMLElement {
 
   _row(r) {
     const einkaufen = r.status === "einkaufen";
+    const rid = r.recipe_id != null ? this._esc(String(r.recipe_id)) : "";
     const img = r.bild
       ? `<div class="kimg" style="background-image:url('${this._esc(r.bild)}')"></div>`
       : `<div class="kimg noimg"><ha-icon icon="mdi:chef-hat"></ha-icon></div>`;
@@ -629,13 +630,15 @@ class TandoorKochlisteCard extends HTMLElement {
       : `<span class="kchip kochbar">kochbar</span>`;
     const action = einkaufen
       ? `<button class="kbtn eingekauft" data-id="${this._esc(r.id)}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:cart-check"></ha-icon>Eingekauft ✓</button>`
-      : `<button class="kbtn gekocht" data-id="${this._esc(r.id)}" data-recipe-id="${r.recipe_id != null ? this._esc(String(r.recipe_id)) : ""}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
+      : `<button class="kbtn gekocht" data-id="${this._esc(r.id)}" data-recipe-id="${rid}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
     return `
       <div class="krow ${einkaufen ? "dim" : ""}">
-        ${img}
-        <div class="kmain">
-          <div class="ktitel">${this._esc(r.titel)}</div>
-          <div class="kchips">${chip}</div>
+        <div class="ktap"${rid ? ` data-recipe-id="${rid}"` : ""}>
+          ${img}
+          <div class="kmain">
+            <div class="ktitel">${this._esc(r.titel)}</div>
+            <div class="kchips">${chip}</div>
+          </div>
         </div>
         ${action}
       </div>`;
@@ -676,10 +679,18 @@ class TandoorKochlisteCard extends HTMLElement {
               return !isNaN(d) && Date.now() - d.getTime() <= maxAge;
             })
           : [];
+        // Nur Rezepte zeigen, deren Zutaten schon auf der Einkaufsliste (Bring)
+        // sind — der Rest wartet eingeklappt. Ohne bring-Info (alte API): alle.
+        const hatBringInfo = einkaufen.some((r) => r.bring !== undefined);
+        const imBring = hatBringInfo ? einkaufen.filter((r) => r.bring) : einkaufen;
+        const geplant = hatBringInfo ? einkaufen.filter((r) => !r.bring) : [];
         // Einkaufs-Fortschritt: wie viele der offenen Rezepte sind schon eingekauft?
         const einkaufBlock = einkaufen.length
           ? `<div class="ksub"><span>🛒 Zum Einkaufen · <b>${kochbar.length}/${offen.length}</b> eingekauft</span><button class="kbtn shoplink"><ha-icon icon="mdi:cart-outline"></ha-icon>Einkaufsliste</button></div>` +
-            einkaufen.map((r) => this._row(r)).join("")
+            imBring.map((r) => this._row(r)).join("") +
+            (geplant.length
+              ? `<button class="kfold">${this._geplantOffen ? "▾" : "▸"} ${geplant.length} weitere geplant (noch nicht auf der Einkaufsliste)</button><div class="kfold-liste" style="display:${this._geplantOffen ? "block" : "none"}">${geplant.map((r) => this._row(r)).join("")}</div>`
+              : "")
           : "";
         content =
           (kochbar.length
@@ -716,6 +727,22 @@ class TandoorKochlisteCard extends HTMLElement {
         .kbtn.eingekauft:disabled { opacity: 0.5; cursor: default; }
         .ksub { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding: 6px 0 2px; border-top: 1px solid var(--divider-color); font-size: 13px; color: var(--secondary-text-color); }
         .ksub .kbtn { padding: 5px 10px; font-size: 12px; }
+        .ktap { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px; }
+        .ktap[data-recipe-id] { cursor: pointer; }
+        .kfold { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--secondary-text-color); font-size: 12px; padding: 8px 0 2px; cursor: pointer; }
+        .tdlg.breit { max-width: 560px; }
+        .tdlg-frame { display: block; width: 100%; height: 78vh; border: 0; }
+        .tdlg-img { height: 200px; background-size: cover; background-position: center; }
+        .tdlg-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+        .chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--secondary-text-color); background: var(--divider-color); border-radius: 10px; padding: 1px 7px; --mdc-icon-size: 13px; }
+        .tdlg-desc { color: var(--secondary-text-color); margin: 8px 0; }
+        .tdlg-step { margin-top: 14px; }
+        .tdlg-step h3 { margin: 0 0 6px; font-size: 15px; }
+        .tdlg-ings { list-style: none; margin: 0 0 8px; padding: 0; }
+        .tdlg-ings li { padding: 3px 0; border-bottom: 1px solid var(--divider-color); font-size: 14px; }
+        .tdlg-ings li.ing-header { font-weight: 700; border: 0; padding-top: 8px; }
+        .tdlg-instr { white-space: pre-wrap; line-height: 1.5; font-size: 14px; }
+        .tdlg-loading { padding: 40px; text-align: center; color: var(--secondary-text-color); }
         .kdones { margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--divider-color); }
         .kdone { font-size: 12px; color: var(--secondary-text-color); padding: 2px 0; }
         .leer { color: var(--secondary-text-color); font-style: italic; padding: 4px 0 8px; }
@@ -752,12 +779,103 @@ class TandoorKochlisteCard extends HTMLElement {
     this.shadowRoot.querySelectorAll(".kbtn.eingekauft").forEach((el) => {
       el.addEventListener("click", () => this._onEingekauft(el));
     });
+    // Einkaufsliste im In-Page-Dialog öffnen (kein neuer Tab — Fully Kiosk!)
     this.shadowRoot.querySelectorAll(".kbtn.shoplink").forEach((el) => {
+      el.addEventListener("click", () => this._openEinkaufDialog());
+    });
+    // Tipp auf Bild/Titel öffnet das Rezept im Dialog
+    this.shadowRoot.querySelectorAll(".ktap[data-recipe-id]").forEach((el) => {
       el.addEventListener("click", () => {
-        const base = String(this._config.essensplan_url || "").replace(/\/+$/, "");
-        if (/^https?:\/\//i.test(base)) window.open(base + "/einkauf.php", "_blank", "noopener");
+        const rid = el.dataset.recipeId || "";
+        if (rid) this._openRecipeDialog(rid);
       });
     });
+    const fold = this.shadowRoot.querySelector(".kfold");
+    if (fold) {
+      fold.addEventListener("click", () => {
+        this._geplantOffen = !this._geplantOffen;
+        const liste = this.shadowRoot.querySelector(".kfold-liste");
+        if (liste) liste.style.display = this._geplantOffen ? "block" : "none";
+        fold.textContent = (this._geplantOffen ? "▾" : "▸") + fold.textContent.slice(1);
+      });
+    }
+  }
+
+  _setDialogContent(html) {
+    const content = this.shadowRoot && this.shadowRoot.querySelector(".tdlg-backdrop .tdlg-content");
+    if (content) content.innerHTML = html;
+  }
+
+  _openEinkaufDialog() {
+    const base = String(this._config.essensplan_url || "").replace(/\/+$/, "");
+    if (!/^https?:\/\//i.test(base)) return;
+    this._openDialog(`<iframe class="tdlg-frame" src="${this._esc(base + "/einkauf.php")}"></iframe>`);
+    const dlg = this.shadowRoot.querySelector(".tdlg");
+    if (dlg) dlg.classList.add("breit");
+  }
+
+  async _openRecipeDialog(recipeId) {
+    this._openDialog(`<div class="tdlg-loading">Rezept wird geladen…</div>`);
+    try {
+      const r = await this._hass.callWS({
+        type: "tandoor/recipe",
+        recipe_id: Number(recipeId),
+        entity_id: this._config.entity || undefined,
+      });
+      this._setDialogContent(this._recipeHtml(r));
+      this._wireDialogRecipe();
+    } catch (err) {
+      this._setDialogContent(
+        `<div class="tdlg-body"><h2>Rezept</h2><p>Konnte nicht geladen werden.</p><p class="leer">${this._esc((err && err.message) || err)}</p><div class="tdlg-actions"><button class="tdlg-btn sec tdlg-close">Schließen</button></div></div>`
+      );
+      const cl = this.shadowRoot.querySelector(".tdlg-content .tdlg-close");
+      if (cl) cl.addEventListener("click", () => this._closeDialog());
+    }
+  }
+
+  _fmtAmount(a) {
+    const n = Number(a);
+    if (!Number.isFinite(n)) return this._esc(a);
+    return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+  }
+
+  _recipeHtml(r) {
+    const meta = [];
+    if (r.working_time) meta.push(`<span class="chip"><ha-icon icon="mdi:knife"></ha-icon>${r.working_time} min</span>`);
+    if (r.waiting_time) meta.push(`<span class="chip"><ha-icon icon="mdi:timer-sand"></ha-icon>${r.waiting_time} min</span>`);
+    if (r.servings) meta.push(`<span class="chip"><ha-icon icon="mdi:account-multiple"></ha-icon>${r.servings}</span>`);
+    const steps = (r.steps || []).map((s) => {
+      const ings = (s.ingredients || []).map((i) => {
+        if (i.header != null) return `<li class="ing-header">${this._esc(i.header)}</li>`;
+        const amt = i.amount ? `${this._fmtAmount(i.amount)} ` : "";
+        const unit = i.unit ? `${this._esc(i.unit)} ` : "";
+        const note = i.note ? ` <span class="leer">(${this._esc(i.note)})</span>` : "";
+        return `<li>${amt}${unit}${this._esc(i.food)}${note}</li>`;
+      }).join("");
+      const instr = s.instruction ? `<div class="tdlg-instr">${this._esc(s.instruction)}</div>` : "";
+      const head = s.name ? `<h3>${this._esc(s.name)}</h3>` : "";
+      if (!ings && !instr && !head) return "";
+      return `<div class="tdlg-step">${head}${ings ? `<ul class="tdlg-ings">${ings}</ul>` : ""}${instr}</div>`;
+    }).join("");
+    const img = r.image ? `<div class="tdlg-img" style="background-image:url('${this._esc(r.image)}')"></div>` : "";
+    return `
+      ${img}
+      <div class="tdlg-body">
+        <h2>${this._esc(r.name)}</h2>
+        ${meta.length ? `<div class="tdlg-meta">${meta.join("")}</div>` : ""}
+        ${r.description ? `<div class="tdlg-desc">${this._esc(r.description)}</div>` : ""}
+        ${steps}
+        <div class="tdlg-actions">
+          <button class="tdlg-btn sec tdlg-close">Schließen</button>
+        </div>
+      </div>`;
+  }
+
+  _wireDialogRecipe() {
+    const root = this.shadowRoot && this.shadowRoot.querySelector(".tdlg-content");
+    if (!root) return;
+    const close = root.querySelector(".tdlg-close");
+    if (close) close.addEventListener("click", () => this._closeDialog());
   }
 
   _showWarn(text) {
@@ -869,6 +987,8 @@ class TandoorKochlisteCard extends HTMLElement {
   _closeDialog() {
     const back = this.shadowRoot && this.shadowRoot.querySelector(".tdlg-backdrop");
     if (back) back.style.display = "none";
+    const dlg = this.shadowRoot && this.shadowRoot.querySelector(".tdlg");
+    if (dlg) dlg.classList.remove("breit");
     this._dialogOpen = false;
     if (this._onKey) document.removeEventListener("keydown", this._onKey);
     if (this._pendingRender !== undefined) {
