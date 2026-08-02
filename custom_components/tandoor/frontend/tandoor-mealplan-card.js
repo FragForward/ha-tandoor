@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.4
+/* Tandoor Mealplan Card v0.5.5
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.4
+/* Tandoor Kochliste Card v0.5.5
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -631,9 +631,14 @@ class TandoorKochlisteCard extends HTMLElement {
     const action = einkaufen
       ? `<button class="kbtn eingekauft" data-id="${this._esc(r.id)}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:cart-check"></ha-icon>Eingekauft ✓</button>`
       : `<button class="kbtn gekocht" data-id="${this._esc(r.id)}" data-recipe-id="${rid}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
+    // Einkaufs-Rezepte: Tipp öffnet die Einkaufsseite NUR für dieses Rezept
+    // (Zutaten abhaken); kochbare Rezepte: Tipp öffnet das Rezept-Popup.
+    const tap = einkaufen
+      ? ` data-kid="${this._esc(r.id)}"`
+      : (rid ? ` data-recipe-id="${rid}"` : "");
     return `
       <div class="krow ${einkaufen ? "dim" : ""}">
-        <div class="ktap"${rid ? ` data-recipe-id="${rid}"` : ""}>
+        <div class="ktap"${tap}>
           ${img}
           <div class="kmain">
             <div class="ktitel">${this._esc(r.titel)}</div>
@@ -684,9 +689,9 @@ class TandoorKochlisteCard extends HTMLElement {
         const hatBringInfo = einkaufen.some((r) => r.bring !== undefined);
         const imBring = hatBringInfo ? einkaufen.filter((r) => r.bring) : einkaufen;
         const geplant = hatBringInfo ? einkaufen.filter((r) => !r.bring) : [];
-        // Einkaufs-Fortschritt: wie viele der offenen Rezepte sind schon eingekauft?
+        // Fortschritt: wie viele der Einkaufs-Rezepte sind schon auf der Einkaufsliste?
         const einkaufBlock = einkaufen.length
-          ? `<div class="ksub"><span>🛒 Zum Einkaufen · <b>${kochbar.length}/${offen.length}</b> eingekauft</span><button class="kbtn shoplink"><ha-icon icon="mdi:cart-outline"></ha-icon>Einkaufsliste</button></div>` +
+          ? `<div class="ksub"><span>🛒 Zum Einkaufen · <b>${imBring.length}/${einkaufen.length}</b> auf der Einkaufsliste</span><button class="kbtn shoplink"><ha-icon icon="mdi:cart-outline"></ha-icon>Einkaufsliste</button></div>` +
             imBring.map((r) => this._row(r)).join("") +
             (geplant.length
               ? `<button class="kfold">${this._geplantOffen ? "▾" : "▸"} ${geplant.length} weitere geplant (noch nicht auf der Einkaufsliste)</button><div class="kfold-liste" style="display:${this._geplantOffen ? "block" : "none"}">${geplant.map((r) => this._row(r)).join("")}</div>`
@@ -783,11 +788,18 @@ class TandoorKochlisteCard extends HTMLElement {
     this.shadowRoot.querySelectorAll(".kbtn.shoplink").forEach((el) => {
       el.addEventListener("click", () => this._openEinkaufDialog());
     });
-    // Tipp auf Bild/Titel öffnet das Rezept im Dialog
+    // Tipp auf Bild/Titel: kochbar -> Rezept-Popup, einkaufen -> Einkaufsseite
+    // nur für dieses Rezept (Zutaten abhaken; alle abgehakt = wird kochbar).
     this.shadowRoot.querySelectorAll(".ktap[data-recipe-id]").forEach((el) => {
       el.addEventListener("click", () => {
         const rid = el.dataset.recipeId || "";
         if (rid) this._openRecipeDialog(rid);
+      });
+    });
+    this.shadowRoot.querySelectorAll(".ktap[data-kid]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const kid = el.dataset.kid || "";
+        if (kid) this._openEinkaufDialog(kid);
       });
     });
     const fold = this.shadowRoot.querySelector(".kfold");
@@ -806,10 +818,11 @@ class TandoorKochlisteCard extends HTMLElement {
     if (content) content.innerHTML = html;
   }
 
-  _openEinkaufDialog() {
+  _openEinkaufDialog(kid) {
     const base = String(this._config.essensplan_url || "").replace(/\/+$/, "");
     if (!/^https?:\/\//i.test(base)) return;
-    this._openDialog(`<iframe class="tdlg-frame" src="${this._esc(base + "/einkauf.php")}"></iframe>`);
+    const url = base + "/einkauf.php" + (kid ? "?rezept=" + encodeURIComponent(kid) : "");
+    this._openDialog(`<iframe class="tdlg-frame" src="${this._esc(url)}"></iframe>`);
     const dlg = this.shadowRoot.querySelector(".tdlg");
     if (dlg) dlg.classList.add("breit");
   }
