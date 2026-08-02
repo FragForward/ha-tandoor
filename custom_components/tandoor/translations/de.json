@@ -27,10 +27,12 @@
       "init": {
         "description": "Optional: die Kochliste der Essensplan-Website anbinden. URL leer lassen, um das Feature zu deaktivieren.",
         "data": {
-          "essensplan_url": "Essensplan-URL"
+          "essensplan_url": "Essensplan-URL",
+          "bring_entity": "Einkaufsliste (Todo-Entität, z. B. Bring)"
         },
         "data_description": {
-          "essensplan_url": "Basis-URL der Essensplan-Website, z. B. http://192.168.1.4:8091. Leer = Kochliste deaktiviert."
+          "essensplan_url": "Basis-URL der Essensplan-Website, z. B. http://192.168.1.4:8091. Leer = Kochliste deaktiviert.",
+          "bring_entity": "Optional: Sind in dieser Liste alle gesendeten Zutaten eines Rezepts abgehakt, wird das Rezept automatisch kochbar. Leer = deaktiviert."
         }
       }
     }

@@ -14,10 +14,16 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_API_TOKEN, CONF_URL, CONF_VERIFY_SSL
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import TandoorAuthenticationError, TandoorClient, TandoorConnectionError
-from .const import CONF_ESSENSPLAN_URL, DEFAULT_ESSENSPLAN_URL, DOMAIN
+from .const import (
+    CONF_BRING_ENTITY,
+    CONF_ESSENSPLAN_URL,
+    DEFAULT_ESSENSPLAN_URL,
+    DOMAIN,
+)
 
 USER_SCHEMA = vol.Schema(
     {
@@ -84,11 +90,16 @@ class TandoorOptionsFlow(OptionsFlow):
             user_input[CONF_ESSENSPLAN_URL] = (
                 user_input.get(CONF_ESSENSPLAN_URL) or ""
             ).strip().rstrip("/")
+            # EntitySelector omits the key when cleared — store "" explicitly
+            user_input[CONF_BRING_ENTITY] = (
+                user_input.get(CONF_BRING_ENTITY) or ""
+            ).strip()
             return self.async_create_entry(data=user_input)
 
         current = self.config_entry.options.get(
             CONF_ESSENSPLAN_URL, DEFAULT_ESSENSPLAN_URL
         )
+        current_bring = self.config_entry.options.get(CONF_BRING_ENTITY, "")
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -98,6 +109,12 @@ class TandoorOptionsFlow(OptionsFlow):
                         default="",
                         description={"suggested_value": current},
                     ): str,
+                    vol.Optional(
+                        CONF_BRING_ENTITY,
+                        description={"suggested_value": current_bring or None},
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain="todo")
+                    ),
                 }
             ),
         )
