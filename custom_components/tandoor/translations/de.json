@@ -68,6 +68,21 @@
         }
       }
     },
+    "kochliste_wunsch": {
+      "name": "Kochliste: Wunsch für nächste Runde",
+      "description": "Trägt einen Wunsch (Freitext oder Rezept-Link) ein, den der Agent bei der nächsten Vorschlagsrunde berücksichtigt.",
+      "fields": {
+        "text": {
+          "name": "Wunsch",
+          "description": "Freitext (z. B. „etwas Asiatisches“) oder ein Rezept-Link."
+        }
+      }
+    },
+    "kochliste_nachschub": {
+      "name": "Kochliste: neue Vorschläge anfordern",
+      "description": "Startet beim nächsten stündlichen Wächter-Lauf eine neue Vorschlagsrunde — egal wie voll die Kochliste ist.",
+      "fields": {}
+    },
     "kochliste_bewerten": {
       "name": "Kochliste: Rezept bewerten",
       "description": "Bewertet ein Tandoor-Rezept mit 0-5 Sternen und optionalem Kommentar (0 = Bewertung löschen).",

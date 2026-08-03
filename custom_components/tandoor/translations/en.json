@@ -68,6 +68,20 @@
         }
       }
     },
+    "kochliste_wunsch": {
+      "name": "Kochliste: wish for next round",
+      "description": "Adds a wish (free text or recipe link) that the agent considers in the next proposal round.",
+      "fields": {
+        "text": {
+          "name": "Wish",
+          "description": "Free text (e.g. 'something asian') or a recipe link."
+        }
+      }
+    },
+    "kochliste_nachschub": {
+      "name": "Kochliste: request new proposals",
+      "description": "Starts a new proposal round on the next hourly watchdog run, regardless of how full the Kochliste is."
+    },
     "kochliste_bewerten": {
       "name": "Kochliste: rate recipe",
       "description": "Rates a Tandoor recipe with 0-5 stars and an optional comment (0 = remove rating).",

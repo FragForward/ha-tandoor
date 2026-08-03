@@ -22,6 +22,16 @@ kochliste_bring:
       selector:
         text:
 
+kochliste_wunsch:
+  fields:
+    text:
+      required: true
+      example: "https://www.gutekueche.at/... oder: ich hätte Lust auf asiatisch"
+      selector:
+        text:
+
+kochliste_nachschub:
+
 kochliste_bewerten:
   fields:
     recipe_id:
