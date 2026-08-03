@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.15
+/* Tandoor Mealplan Card v0.5.16
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.15
+/* Tandoor Kochliste Card v0.5.16
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -707,7 +707,8 @@ class TandoorKochlisteCard extends HTMLElement {
             ? kochbar.map((r) => this._row(r, "kochbar")).join("")
             : `<div class="leer">${offen.length ? "Noch nichts kochbar — erst einkaufen 🛒" : "Kochliste ist leer — alles gekocht! 🎉"}</div>`) +
           einkaufBlock +
-          (done.length ? `<div class="kdones">${done.map((r) => this._doneRow(r)).join("")}</div>` : "");
+          (done.length ? `<div class="kdones">${done.map((r) => this._doneRow(r)).join("")}</div>` : "") +
+          `<div class="kfuss"><button class="kbtn wunschbtn"><ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>Das will ich haben</button><button class="kbtn nachschubbtn"><ha-icon icon="mdi:autorenew"></ha-icon>Neue Rezepte vorschlagen</button></div>`;
       }
     } catch (err) {
       // Nie die HA-Fehlerkarte auslösen — lieber lesbare Meldung in der Karte zeigen.
@@ -749,6 +750,9 @@ class TandoorKochlisteCard extends HTMLElement {
         .ksub2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 4px 0 2px; font-size: 12px; font-weight: 600; color: var(--secondary-text-color); }
         .ksub2 .kbtn { padding: 4px 9px; font-size: 12px; }
         .kbtn.efold { background: var(--divider-color); color: var(--secondary-text-color); font-weight: 600; }
+        .kfuss { display: flex; gap: 8px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--divider-color); }
+        .kfuss .kbtn { flex: 1 1 0; justify-content: center; background: var(--divider-color); color: var(--primary-text-color); font-weight: 600; font-size: 12px; padding: 9px 6px; }
+        .kfuss .kbtn:disabled { opacity: 0.7; cursor: default; }
         .ktap { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px; }
         .ktap[data-recipe-id] { cursor: pointer; }
         .kfold { display: block; width: 100%; text-align: left; background: none; border: 0; color: var(--secondary-text-color); font-size: 12px; padding: 8px 0 2px; cursor: pointer; }
@@ -837,6 +841,23 @@ class TandoorKochlisteCard extends HTMLElement {
         }
       });
     });
+    // Fußleiste: Wunsch für die nächste Runde + neue Vorschläge anfordern
+    const wunsch = this.shadowRoot.querySelector(".kbtn.wunschbtn");
+    if (wunsch) wunsch.addEventListener("click", () => this._openWunschDialog());
+    const nachschub = this.shadowRoot.querySelector(".kbtn.nachschubbtn");
+    if (nachschub) {
+      nachschub.addEventListener("click", async () => {
+        if (!window.confirm("Beim nächsten stündlichen Lauf werden neue Rezepte zum Abstimmen vorgeschlagen. Eine bereits laufende Abstimmung würde dabei ersetzt. Fortfahren?")) return;
+        nachschub.disabled = true;
+        try {
+          await this._hass.callService("tandoor", "kochliste_nachschub", {});
+          nachschub.innerHTML = "✓ Angefordert — startet in max. 1 Stunde";
+        } catch (err) {
+          nachschub.disabled = false;
+          this._showWarn("Anfordern fehlgeschlagen: " + ((err && err.message) || err));
+        }
+      });
+    }
     // Auf-/Zuklappen des Einkaufsbereichs
     const efold = this.shadowRoot.querySelector(".kbtn.efold");
     if (efold) {
@@ -847,6 +868,39 @@ class TandoorKochlisteCard extends HTMLElement {
         efold.textContent = this._einkaufOffen ? "▾ Zuklappen" : "▸ Anzeigen";
       });
     }
+  }
+
+  _openWunschDialog() {
+    this._openDialog(`
+      <div class="tdlg-body">
+        <h2>💡 Das will ich haben</h2>
+        <p class="klbl">Rezept-Link oder Wunsch (z. B. „etwas Asiatisches") — wird bei der nächsten Vorschlagsrunde berücksichtigt.</p>
+        <textarea class="kcomment w-text" rows="3" placeholder="Link oder Wunsch eingeben …"></textarea>
+        <div class="tdlg-actions">
+          <button class="tdlg-btn sec w-abbruch">Abbrechen</button>
+          <button class="tdlg-btn gruen w-save"><ha-icon icon="mdi:check"></ha-icon>Speichern</button>
+        </div>
+      </div>`);
+    const root = this.shadowRoot.querySelector(".tdlg-content");
+    if (!root) return;
+    root.querySelector(".w-abbruch").addEventListener("click", () => this._closeDialog());
+    root.querySelector(".w-save").addEventListener("click", async () => {
+      const text = (root.querySelector(".w-text").value || "").trim();
+      if (!text) return;
+      const save = root.querySelector(".w-save");
+      save.disabled = true;
+      try {
+        await this._hass.callService("tandoor", "kochliste_wunsch", { text });
+      } catch (err) {
+        save.disabled = false;
+        const warn = document.createElement("div");
+        warn.className = "kwarn";
+        warn.textContent = "Speichern fehlgeschlagen: " + ((err && err.message) || err);
+        root.appendChild(warn);
+        return;
+      }
+      this._closeDialog();
+    });
   }
 
   _setDialogContent(html) {

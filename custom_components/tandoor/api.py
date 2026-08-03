@@ -420,6 +420,14 @@ class EssensplanClient:
             {"kid": item_id, "food_id": food_id, "abgehakt": abgehakt},
         )
 
+    async def wunsch(self, text: str) -> None:
+        """Add a wish (free text or link) for the next proposal round."""
+        await self._post_ok("naechste_add", {"text": text})
+
+    async def nachschub_anfordern(self) -> None:
+        """Request a fresh proposal round on the next watchdog run."""
+        await self._post_ok("nachschub_anfordern", {})
+
     async def rezept_stern(
         self, recipe_id: int, sterne: int, kommentar: str | None = None
     ) -> None:
