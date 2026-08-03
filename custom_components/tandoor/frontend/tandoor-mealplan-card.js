@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.8
+/* Tandoor Mealplan Card v0.5.9
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.8
+/* Tandoor Kochliste Card v0.5.9
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -639,7 +639,7 @@ class TandoorKochlisteCard extends HTMLElement {
     // Tipp auf Bild/Titel öffnet IMMER das Rezept-Popup (alle Gruppen).
     return `
       <div class="krow ${gruppe === "kochbar" ? "" : "dim"}">
-        <div class="ktap"${rid ? ` data-recipe-id="${rid}"` : ""}>
+        <div class="ktap"${rid ? ` data-recipe-id="${rid}"` : ""} data-kid="${this._esc(r.id)}" data-gruppe="${gruppe}" data-titel="${this._esc(r.titel)}">
           ${img}
           <div class="kmain">
             <div class="ktitel">${this._esc(r.titel)}</div>
@@ -734,6 +734,13 @@ class TandoorKochlisteCard extends HTMLElement {
         .kbtn.gekocht:disabled { opacity: 0.5; cursor: default; }
         .kbtn.shoplink { background: var(--divider-color); color: var(--secondary-text-color); font-weight: 400; }
         .kbtn.zutaten { background: rgba(255, 152, 0, 0.85); color: #fff; }
+        .tdlg-btn.gruen { background: rgba(76, 175, 80, 0.9); color: #fff; }
+        .tdlg-btn:disabled { opacity: 0.5; cursor: default; }
+        .zst-kopf { font-weight: 600; font-size: 13px; color: var(--secondary-text-color); margin: 10px 0 4px; }
+        .zst-ok { opacity: 0.55; text-decoration: line-through; }
+        .zst-daheim { opacity: 0.65; }
+        .zmenge { color: var(--accent-color, #ff9800); font-size: 12px; }
+        .zst-fold { margin-top: 12px; }
         .kbtn.aufliste { background: rgba(3, 169, 244, 0.85); color: #fff; }
         .kbtn.aufliste:disabled { opacity: 0.6; cursor: default; }
         .ksub { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding: 6px 0 2px; border-top: 1px solid var(--divider-color); font-size: 13px; color: var(--secondary-text-color); }
@@ -796,11 +803,18 @@ class TandoorKochlisteCard extends HTMLElement {
     this.shadowRoot.querySelectorAll(".kbtn.shoplink").forEach((el) => {
       el.addEventListener("click", () => this._openEinkaufDialog());
     });
-    // Tipp auf Bild/Titel öffnet das Rezept-Popup (alle Gruppen)
+    // Tipp auf Bild/Titel öffnet das Rezept-Popup (alle Gruppen) — mit
+    // Kochlisten-Kontext für Status-Knöpfe und Zutaten-Ausklappmenü
     this.shadowRoot.querySelectorAll(".ktap[data-recipe-id]").forEach((el) => {
       el.addEventListener("click", () => {
         const rid = el.dataset.recipeId || "";
-        if (rid) this._openRecipeDialog(rid);
+        if (rid) {
+          this._openRecipeDialog(rid, {
+            kid: el.dataset.kid || "",
+            gruppe: el.dataset.gruppe || "",
+            titel: el.dataset.titel || "",
+          });
+        }
       });
     });
     // Auf-/Zuklappen der beiden Einkaufs-Gruppen
@@ -831,7 +845,7 @@ class TandoorKochlisteCard extends HTMLElement {
     if (dlg) dlg.classList.add("breit");
   }
 
-  async _openRecipeDialog(recipeId) {
+  async _openRecipeDialog(recipeId, kl) {
     this._openDialog(`<div class="tdlg-loading">Rezept wird geladen…</div>`);
     try {
       const r = await this._hass.callWS({
@@ -839,8 +853,8 @@ class TandoorKochlisteCard extends HTMLElement {
         recipe_id: Number(recipeId),
         entity_id: this._config.entity || undefined,
       });
-      this._setDialogContent(this._recipeHtml(r));
-      this._wireDialogRecipe();
+      this._setDialogContent(this._recipeHtml(r, kl));
+      this._wireDialogRecipe(kl, r);
     } catch (err) {
       this._setDialogContent(
         `<div class="tdlg-body"><h2>Rezept</h2><p>Konnte nicht geladen werden.</p><p class="leer">${this._esc((err && err.message) || err)}</p><div class="tdlg-actions"><button class="tdlg-btn sec tdlg-close">Schließen</button></div></div>`
@@ -856,7 +870,7 @@ class TandoorKochlisteCard extends HTMLElement {
     return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
   }
 
-  _recipeHtml(r) {
+  _recipeHtml(r, kl) {
     const meta = [];
     if (r.working_time) meta.push(`<span class="chip"><ha-icon icon="mdi:knife"></ha-icon>${r.working_time} min</span>`);
     if (r.waiting_time) meta.push(`<span class="chip"><ha-icon icon="mdi:timer-sand"></ha-icon>${r.waiting_time} min</span>`);
@@ -875,6 +889,21 @@ class TandoorKochlisteCard extends HTMLElement {
       return `<div class="tdlg-step">${head}${ings ? `<ul class="tdlg-ings">${ings}</ul>` : ""}${instr}</div>`;
     }).join("");
     const img = r.image ? `<div class="tdlg-img" style="background-image:url('${this._esc(r.image)}')"></div>` : "";
+    // Kochlisten-Kontext: Status-Knöpfe + Zutaten-Ausklappmenü unten im Rezept
+    let statusBtns = "";
+    let zst = "";
+    if (kl && kl.kid) {
+      if (kl.gruppe === "geplant") {
+        statusBtns = `<button class="tdlg-btn zst-aufliste"><ha-icon icon="mdi:cart-arrow-down"></ha-icon>In die Einkaufsliste</button><button class="tdlg-btn gruen zst-eingekauft"><ha-icon icon="mdi:cart-check"></ha-icon>Eingekauft ✓</button>`;
+      } else if (kl.gruppe === "bring") {
+        statusBtns = `<button class="tdlg-btn gruen zst-eingekauft"><ha-icon icon="mdi:cart-check"></ha-icon>Eingekauft ✓</button>`;
+      } else if (kl.gruppe === "kochbar") {
+        statusBtns = `<button class="tdlg-btn gruen zst-gekocht"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
+      }
+      if (kl.gruppe === "bring" || kl.gruppe === "geplant") {
+        zst = `<button class="kfold zst-fold">▸ Zutaten-Status anzeigen</button><div class="zst" style="display:none"></div>`;
+      }
+    }
     return `
       ${img}
       <div class="tdlg-body">
@@ -882,17 +911,89 @@ class TandoorKochlisteCard extends HTMLElement {
         ${meta.length ? `<div class="tdlg-meta">${meta.join("")}</div>` : ""}
         ${r.description ? `<div class="tdlg-desc">${this._esc(r.description)}</div>` : ""}
         ${steps}
+        ${zst}
         <div class="tdlg-actions">
+          ${statusBtns}
           <button class="tdlg-btn sec tdlg-close">Schließen</button>
         </div>
       </div>`;
   }
 
-  _wireDialogRecipe() {
+  _wireDialogRecipe(kl, r) {
     const root = this.shadowRoot && this.shadowRoot.querySelector(".tdlg-content");
     if (!root) return;
     const close = root.querySelector(".tdlg-close");
     if (close) close.addEventListener("click", () => this._closeDialog());
+    if (!kl || !kl.kid) return;
+    // Status ändern: geplant -> Einkaufsliste/Eingekauft, bring -> Eingekauft,
+    // kochbar -> Gekocht (mit Sterne-Dialog)
+    const auf = root.querySelector(".zst-aufliste");
+    if (auf) auf.addEventListener("click", () => this._openEinkaufDialog(kl.kid));
+    const eing = root.querySelector(".zst-eingekauft");
+    if (eing) {
+      eing.addEventListener("click", async () => {
+        eing.disabled = true;
+        try {
+          await this._hass.callService("tandoor", "kochliste_kochbar", { id: kl.kid });
+          this._closeDialog();
+        } catch (err) {
+          eing.disabled = false;
+          this._showWarn("Markieren fehlgeschlagen: " + ((err && err.message) || err));
+        }
+      });
+    }
+    const gek = root.querySelector(".zst-gekocht");
+    if (gek) {
+      gek.addEventListener("click", async () => {
+        const titel = kl.titel || (r && r.name) || "";
+        if (this._config.confirm_gekocht && !window.confirm(`„${titel}“ als gekocht markieren?`)) return;
+        gek.disabled = true;
+        try {
+          await this._hass.callService("tandoor", "kochliste_gekocht", { id: kl.kid });
+        } catch (err) {
+          gek.disabled = false;
+          this._showWarn("Abhaken fehlgeschlagen: " + ((err && err.message) || err));
+          return;
+        }
+        const rid = r && r.id != null ? String(r.id) : "";
+        if (rid) this._openSterneDialog(rid, titel);
+        else this._closeDialog();
+      });
+    }
+    // Zutaten-Ausklappmenü: erst beim Öffnen laden (WS kochliste_zutaten)
+    const fold = root.querySelector(".zst-fold");
+    if (fold) {
+      fold.addEventListener("click", async () => {
+        const box = root.querySelector(".zst");
+        if (!box) return;
+        const offen = box.style.display !== "none";
+        box.style.display = offen ? "none" : "block";
+        fold.textContent = (offen ? "▸" : "▾") + fold.textContent.slice(1);
+        if (offen || box.dataset.geladen) return;
+        box.innerHTML = `<div class="tdlg-loading">Lade Zutaten-Status …</div>`;
+        try {
+          const z = await this._hass.callWS({
+            type: "tandoor/kochliste_zutaten",
+            kid: kl.kid,
+            entity_id: this._config.entity || undefined,
+          });
+          box.dataset.geladen = "1";
+          const kauf = (z.kaufen || []).map((i) =>
+            `<li class="${i.abgehakt ? "zst-ok" : ""}">${i.abgehakt ? "✓" : "🛒"} ${this._esc(i.name)}${i.menge ? ` <span class="zmenge">${this._esc(i.menge)}</span>` : ""}</li>`
+          ).join("");
+          const daheim = (z.daheim || []).map((i) =>
+            `<li class="zst-daheim">✔ ${this._esc(i.name)}${i.menge ? ` <span class="zmenge">${this._esc(i.menge)}</span>` : ""}</li>`
+          ).join("");
+          const offenAnzahl = (z.kaufen || []).filter((i) => !i.abgehakt).length;
+          box.innerHTML =
+            (kauf ? `<div class="zst-kopf">🛒 Noch nicht gekauft (${offenAnzahl})</div><ul class="tdlg-ings">${kauf}</ul>` : "") +
+            (daheim ? `<div class="zst-kopf">✔ Haben wir daheim (${(z.daheim || []).length})</div><ul class="tdlg-ings">${daheim}</ul>` : "") +
+            (!kauf && !daheim ? `<div class="leer">Keine Einkaufsdaten für dieses Rezept.</div>` : "");
+        } catch (err) {
+          box.innerHTML = `<div class="leer">Konnte nicht geladen werden: ${this._esc((err && err.message) || err)}</div>`;
+        }
+      });
+    }
   }
 
   _showWarn(text) {
