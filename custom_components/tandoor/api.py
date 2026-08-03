@@ -411,6 +411,15 @@ class EssensplanClient:
         """Send one recipe's shopping items to the shopping list (Bring)."""
         await self._post_ok("rezept_bring", {"id": item_id})
 
+    async def zutat_abhaken(
+        self, item_id: str, food_id: int, abgehakt: bool
+    ) -> None:
+        """Set the checked-off state of one ingredient for one recipe."""
+        await self._post_ok(
+            "zutat_abhaken",
+            {"kid": item_id, "food_id": food_id, "abgehakt": abgehakt},
+        )
+
     async def rezept_stern(
         self, recipe_id: int, sterne: int, kommentar: str | None = None
     ) -> None:
