@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.7
+/* Tandoor Mealplan Card v0.5.8
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.7
+/* Tandoor Kochliste Card v0.5.8
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -632,8 +632,9 @@ class TandoorKochlisteCard extends HTMLElement {
       // Zutaten-Checkliste dieses Rezepts (dort gibt es "Alle eingekauft")
       action = `<button class="kbtn zutaten" data-kid="${this._esc(r.id)}"><ha-icon icon="mdi:cart-check"></ha-icon>Abhaken</button>`;
     } else {
-      // Ein Tipp schickt die Zutaten dieses Rezepts auf die Einkaufsliste
-      action = `<button class="kbtn aufliste" data-id="${this._esc(r.id)}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:cart-arrow-down"></ha-icon>In die Einkaufsliste</button>`;
+      // Öffnet die Zutaten-Ansicht dieses Rezepts (Kontrolle, was gekauft
+      // werden muss) — gesendet wird ERST dort mit "Nach Bring senden".
+      action = `<button class="kbtn aufliste" data-kid="${this._esc(r.id)}"><ha-icon icon="mdi:cart-arrow-down"></ha-icon>In die Einkaufsliste</button>`;
     }
     // Tipp auf Bild/Titel öffnet IMMER das Rezept-Popup (alle Gruppen).
     return `
@@ -689,7 +690,8 @@ class TandoorKochlisteCard extends HTMLElement {
         const hatBringInfo = einkaufen.some((r) => r.bring !== undefined);
         const imBring = hatBringInfo ? einkaufen.filter((r) => r.bring) : einkaufen;
         const geplant = hatBringInfo ? einkaufen.filter((r) => !r.bring) : [];
-        if (this._bringOffen === undefined) this._bringOffen = true;
+        // Beide Gruppen starten zugeklappt (Wunsch Alex)
+        if (this._bringOffen === undefined) this._bringOffen = false;
         const bringBlock = imBring.length
           ? `<button class="kfold" data-fold="bring">${this._bringOffen ? "▾" : "▸"} 📲 Auf der Einkaufsliste (${imBring.length})</button><div class="kfold-liste" data-liste="bring" style="display:${this._bringOffen ? "block" : "none"}">${imBring.map((r) => this._row(r, "bring")).join("")}</div>`
           : "";
@@ -785,12 +787,9 @@ class TandoorKochlisteCard extends HTMLElement {
     this.shadowRoot.querySelectorAll(".kbtn.gekocht").forEach((el) => {
       el.addEventListener("click", () => this._onGekocht(el));
     });
-    // "In die Einkaufsliste": Zutaten dieses Rezepts nach Bring schicken
-    this.shadowRoot.querySelectorAll(".kbtn.aufliste").forEach((el) => {
-      el.addEventListener("click", () => this._onAufListe(el));
-    });
-    // "Abhaken": Zutaten-Checkliste dieses Rezepts im Dialog
-    this.shadowRoot.querySelectorAll(".kbtn.zutaten").forEach((el) => {
+    // "In die Einkaufsliste" + "Abhaken": Zutaten-Ansicht dieses Rezepts
+    // im Dialog (senden bzw. abhaken passiert dort)
+    this.shadowRoot.querySelectorAll(".kbtn.aufliste, .kbtn.zutaten").forEach((el) => {
       el.addEventListener("click", () => this._openEinkaufDialog(el.dataset.kid || ""));
     });
     // Einkaufsliste im In-Page-Dialog öffnen (kein neuer Tab — Fully Kiosk!)
@@ -816,22 +815,6 @@ class TandoorKochlisteCard extends HTMLElement {
         fold.textContent = (offen ? "▾" : "▸") + fold.textContent.slice(1);
       });
     });
-  }
-
-  async _onAufListe(btn) {
-    const id = btn.dataset.id || "";
-    if (!id) return;
-    btn.disabled = true;
-    const alt = btn.innerHTML;
-    btn.innerHTML = "⏳ Sende …";
-    try {
-      await this._hass.callService("tandoor", "kochliste_bring", { id });
-      btn.innerHTML = "✓ Auf der Liste";
-    } catch (err) {
-      btn.disabled = false;
-      btn.innerHTML = alt;
-      this._showWarn("Senden fehlgeschlagen: " + ((err && err.message) || err));
-    }
   }
 
   _setDialogContent(html) {
