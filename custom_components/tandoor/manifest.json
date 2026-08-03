@@ -5,6 +5,9 @@
     "@FragForward"
   ],
   "config_flow": true,
+  "after_dependencies": [
+    "lovelace"
+  ],
   "dependencies": [
     "frontend",
     "http",
@@ -15,5 +18,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/FragForward/ha-tandoor/issues",
   "requirements": [],
-  "version": "0.5.10"
+  "version": "0.5.11"
 }
