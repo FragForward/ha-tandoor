@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.9
+/* Tandoor Mealplan Card v0.5.10
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.9
+/* Tandoor Kochliste Card v0.5.10
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -629,12 +629,13 @@ class TandoorKochlisteCard extends HTMLElement {
     if (gruppe === "kochbar") {
       action = `<button class="kbtn gekocht" data-id="${this._esc(r.id)}" data-recipe-id="${rid}" data-titel="${this._esc(r.titel)}"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
     } else if (gruppe === "bring") {
-      // Zutaten-Checkliste dieses Rezepts (dort gibt es "Alle eingekauft")
-      action = `<button class="kbtn zutaten" data-kid="${this._esc(r.id)}"><ha-icon icon="mdi:cart-check"></ha-icon>Abhaken</button>`;
+      // Öffnet die Kaufliste dieses Rezepts (beim Einkaufen abhaken;
+      // dort gibt es auch "Alle eingekauft")
+      action = `<button class="kbtn zutaten" data-kid="${this._esc(r.id)}"><ha-icon icon="mdi:format-list-checks"></ha-icon>Kaufliste</button>`;
     } else {
       // Öffnet die Zutaten-Ansicht dieses Rezepts (Kontrolle, was gekauft
       // werden muss) — gesendet wird ERST dort mit "Nach Bring senden".
-      action = `<button class="kbtn aufliste" data-kid="${this._esc(r.id)}"><ha-icon icon="mdi:cart-arrow-down"></ha-icon>In die Einkaufsliste</button>`;
+      action = `<button class="kbtn aufliste" data-kid="${this._esc(r.id)}"><ha-icon icon="mdi:cart-plus"></ha-icon>In die Einkaufsliste</button>`;
     }
     // Tipp auf Bild/Titel öffnet IMMER das Rezept-Popup (alle Gruppen).
     return `
@@ -894,14 +895,14 @@ class TandoorKochlisteCard extends HTMLElement {
     let zst = "";
     if (kl && kl.kid) {
       if (kl.gruppe === "geplant") {
-        statusBtns = `<button class="tdlg-btn zst-aufliste"><ha-icon icon="mdi:cart-arrow-down"></ha-icon>In die Einkaufsliste</button><button class="tdlg-btn gruen zst-eingekauft"><ha-icon icon="mdi:cart-check"></ha-icon>Eingekauft ✓</button>`;
+        statusBtns = `<button class="tdlg-btn zst-aufliste"><ha-icon icon="mdi:cart-plus"></ha-icon>In die Einkaufsliste</button><button class="tdlg-btn gruen zst-eingekauft"><ha-icon icon="mdi:cart-check"></ha-icon>Alles eingekauft ✓</button>`;
       } else if (kl.gruppe === "bring") {
-        statusBtns = `<button class="tdlg-btn gruen zst-eingekauft"><ha-icon icon="mdi:cart-check"></ha-icon>Eingekauft ✓</button>`;
+        statusBtns = `<button class="tdlg-btn gruen zst-eingekauft"><ha-icon icon="mdi:cart-check"></ha-icon>Alles eingekauft ✓</button>`;
       } else if (kl.gruppe === "kochbar") {
         statusBtns = `<button class="tdlg-btn gruen zst-gekocht"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
       }
       if (kl.gruppe === "bring" || kl.gruppe === "geplant") {
-        zst = `<button class="kfold zst-fold">▸ Zutaten-Status anzeigen</button><div class="zst" style="display:none"></div>`;
+        zst = `<button class="kfold zst-fold">▸ Welche Zutaten fehlen noch?</button><div class="zst" style="display:none"></div>`;
       }
     }
     return `
