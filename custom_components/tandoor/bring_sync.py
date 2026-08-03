@@ -103,6 +103,7 @@ class TandoorBringSync:
             if item.get("status") == "needs_action"
         }
         zutaten = data.get("zutaten") or []
+        abgehakt_map = data.get("abgehakt") or {}
         done_any = False
         for rezept in data.get("rezepte") or []:
             kid = str(rezept.get("id") or "")
@@ -119,11 +120,18 @@ class TandoorBringSync:
             ]
             if not sent:
                 continue
-            still_open = [
-                z
-                for z in sent
-                if str(z.get("name") or "").strip().lower() in open_names
-            ]
+            bereits = {int(f) for f in abgehakt_map.get(kid) or []}
+            still_open = []
+            for zutat in sent:
+                if str(zutat.get("name") or "").strip().lower() in open_names:
+                    still_open.append(zutat)
+                    continue
+                # In Bring abgehakt/entfernt -> auch auf der Website und in
+                # der Karten-Zutatenliste als erledigt markieren (einmalig).
+                fid = int(zutat.get("food_id") or 0)
+                if fid and fid not in bereits:
+                    await self._client.zutat_abhaken(kid, fid, True)
+                    done_any = True
             if still_open:
                 continue
             _LOGGER.info(
