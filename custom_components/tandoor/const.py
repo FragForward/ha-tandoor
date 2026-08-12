@@ -4,7 +4,7 @@ from datetime import timedelta
 
 DOMAIN = "tandoor"
 
-FRONTEND_VERSION = "0.5.16"
+FRONTEND_VERSION = "0.5.17"
 FRONTEND_URL = f"/{DOMAIN}-frontend/tandoor-mealplan-card.js"
 
 SHOPPING_UPDATE_INTERVAL = timedelta(seconds=60)

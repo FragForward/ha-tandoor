@@ -22,6 +22,22 @@ kochliste_bring:
       selector:
         text:
 
+kochliste_add:
+  fields:
+    recipe_id:
+      required: false
+      example: 62
+      selector:
+        number:
+          min: 1
+          max: 1000000
+          mode: box
+    freitext:
+      required: false
+      example: "Eierschwammerlsauce mit Knödel"
+      selector:
+        text:
+
 kochliste_wunsch:
   fields:
     text:

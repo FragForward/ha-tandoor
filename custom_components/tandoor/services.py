@@ -26,6 +26,16 @@ SERVICE_KOCHLISTE_WUNSCH = "kochliste_wunsch"
 SERVICE_KOCHLISTE_NACHSCHUB = "kochliste_nachschub"
 
 KOCHLISTE_WUNSCH_SCHEMA = vol.Schema({vol.Required("text"): cv.string})
+SERVICE_KOCHLISTE_ADD = "kochliste_add"
+KOCHLISTE_ADD_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Optional("recipe_id"): vol.Coerce(int),
+            vol.Optional("freitext"): cv.string,
+        }
+    ),
+    cv.has_at_least_one_key("recipe_id", "freitext"),
+)
 
 KOCHLISTE_ID_SCHEMA = vol.Schema({vol.Required("id"): cv.string})
 KOCHLISTE_BEWERTEN_SCHEMA = vol.Schema(
@@ -92,6 +102,18 @@ def async_register_services(hass: HomeAssistant) -> None:
             raise HomeAssistantError(f"Kochliste bring failed: {err}") from err
         await _refresh(entry)
 
+    async def handle_add(call: ServiceCall) -> None:
+        """Add a dish to the Kochliste (recipe id or free text)."""
+        entry = _kochliste_entry(hass)
+        try:
+            await entry.runtime_data.kochliste.client.kochliste_add(
+                recipe_id=call.data.get("recipe_id"),
+                freitext=call.data.get("freitext"),
+            )
+        except EssensplanError as err:
+            raise HomeAssistantError(f"Kochliste add failed: {err}") from err
+        await _refresh(entry)
+
     async def handle_wunsch(call: ServiceCall) -> None:
         """Add a wish (text or link) for the next proposal round."""
         entry = _kochliste_entry(hass)
@@ -146,4 +168,7 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN, SERVICE_KOCHLISTE_NACHSCHUB, handle_nachschub, schema=vol.Schema({})
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_KOCHLISTE_ADD, handle_add, schema=KOCHLISTE_ADD_SCHEMA
     )

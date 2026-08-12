@@ -420,6 +420,24 @@ class EssensplanClient:
             {"kid": item_id, "food_id": food_id, "abgehakt": abgehakt},
         )
 
+    async def kochliste_add(
+        self, recipe_id: int | None = None, freitext: str | None = None
+    ) -> None:
+        """Add a dish to the Kochliste (Tandoor recipe id OR free text)."""
+        payload: dict[str, Any] = {}
+        if recipe_id:
+            payload["recipe_id"] = recipe_id
+        if freitext:
+            payload["freitext"] = freitext
+        await self._post_ok("kochliste_add", payload)
+
+    async def rezept_suche(self, query: str) -> list[dict[str, Any]]:
+        """Search the Tandoor cookbook (for the add dialog)."""
+        data = await self._request("POST", "rezept_suche", json={"q": query})
+        if isinstance(data, dict) and isinstance(data.get("treffer"), list):
+            return data["treffer"]
+        return []
+
     async def wunsch(self, text: str) -> None:
         """Add a wish (free text or link) for the next proposal round."""
         await self._post_ok("naechste_add", {"text": text})

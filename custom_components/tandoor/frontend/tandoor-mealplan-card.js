@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.16
+/* Tandoor Mealplan Card v0.5.17
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.16
+/* Tandoor Kochliste Card v0.5.17
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -708,7 +708,7 @@ class TandoorKochlisteCard extends HTMLElement {
             : `<div class="leer">${offen.length ? "Noch nichts kochbar — erst einkaufen 🛒" : "Kochliste ist leer — alles gekocht! 🎉"}</div>`) +
           einkaufBlock +
           (done.length ? `<div class="kdones">${done.map((r) => this._doneRow(r)).join("")}</div>` : "") +
-          `<div class="kfuss"><button class="kbtn wunschbtn"><ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>Das will ich haben</button><button class="kbtn nachschubbtn"><ha-icon icon="mdi:autorenew"></ha-icon>Neue Rezepte vorschlagen</button></div>`;
+          `<div class="kfuss"><button class="kbtn addbtn"><ha-icon icon="mdi:plus"></ha-icon>Gericht hinzufügen</button><button class="kbtn wunschbtn"><ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>Das will ich haben</button><button class="kbtn nachschubbtn"><ha-icon icon="mdi:autorenew"></ha-icon>Neue Rezepte vorschlagen</button></div>`;
       }
     } catch (err) {
       // Nie die HA-Fehlerkarte auslösen — lieber lesbare Meldung in der Karte zeigen.
@@ -750,7 +750,14 @@ class TandoorKochlisteCard extends HTMLElement {
         .ksub2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 4px 0 2px; font-size: 12px; font-weight: 600; color: var(--secondary-text-color); }
         .ksub2 .kbtn { padding: 4px 9px; font-size: 12px; }
         .kbtn.efold { background: var(--divider-color); color: var(--secondary-text-color); font-weight: 600; }
-        .kfuss { display: flex; gap: 8px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--divider-color); }
+        .kfuss { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--divider-color); }
+        .a-zeile { display: flex; gap: 8px; margin: 8px 0; }
+        .a-zeile .kcomment { margin-top: 0; }
+        .a-treffer { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; cursor: pointer; background: var(--secondary-background-color); margin-bottom: 6px; font-size: 14px; }
+        .a-treffer img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+        .a-noimg { width: 40px; text-align: center; font-size: 22px; }
+        .a-frei { display: block; color: var(--secondary-text-color); }
+        .a-frei small { color: var(--disabled-text-color); }
         .kfuss .kbtn { flex: 1 1 0; justify-content: center; background: var(--divider-color); color: var(--primary-text-color); font-weight: 600; font-size: 12px; padding: 9px 6px; }
         .kfuss .kbtn:disabled { opacity: 0.7; cursor: default; }
         .ktap { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px; }
@@ -841,7 +848,9 @@ class TandoorKochlisteCard extends HTMLElement {
         }
       });
     });
-    // Fußleiste: Wunsch für die nächste Runde + neue Vorschläge anfordern
+    // Fußleiste: Gericht hinzufügen, Wunsch, neue Vorschläge anfordern
+    const add = this.shadowRoot.querySelector(".kbtn.addbtn");
+    if (add) add.addEventListener("click", () => this._openAddDialog());
     const wunsch = this.shadowRoot.querySelector(".kbtn.wunschbtn");
     if (wunsch) wunsch.addEventListener("click", () => this._openWunschDialog());
     const nachschub = this.shadowRoot.querySelector(".kbtn.nachschubbtn");
@@ -868,6 +877,71 @@ class TandoorKochlisteCard extends HTMLElement {
         efold.textContent = this._einkaufOffen ? "▾ Zuklappen" : "▸ Anzeigen";
       });
     }
+  }
+
+  _openAddDialog() {
+    // Gericht per Hand auf die Kochliste: Tandoor-Suche oder Freitext.
+    // Freitext bekommt beim nächsten Stundenlauf automatisch ein Rezept.
+    this._openDialog(`
+      <div class="tdlg-body">
+        <h2>➕ Gericht zur Kochliste</h2>
+        <div class="a-zeile">
+          <input class="kcomment a-q" placeholder="Gericht suchen oder eintippen …">
+          <button class="tdlg-btn a-suchen"><ha-icon icon="mdi:magnify"></ha-icon></button>
+        </div>
+        <div class="a-ergebnisse"></div>
+        <div class="tdlg-actions">
+          <button class="tdlg-btn sec tdlg-close">Abbrechen</button>
+        </div>
+      </div>`);
+    const root = this.shadowRoot.querySelector(".tdlg-content");
+    if (!root) return;
+    root.querySelector(".tdlg-close").addEventListener("click", () => this._closeDialog());
+    const feld = root.querySelector(".a-q");
+    const ergebnisse = root.querySelector(".a-ergebnisse");
+    const hinzufuegen = async (payload, el) => {
+      el.style.pointerEvents = "none";
+      el.style.opacity = "0.5";
+      try {
+        await this._hass.callService("tandoor", "kochliste_add", payload);
+        this._closeDialog();
+      } catch (err) {
+        el.style.pointerEvents = "";
+        el.style.opacity = "";
+        this._showWarn("Hinzufügen fehlgeschlagen: " + ((err && err.message) || err));
+        this._closeDialog();
+      }
+    };
+    const suchen = async () => {
+      const q = (feld.value || "").trim();
+      if (!q) return;
+      ergebnisse.innerHTML = `<div class="tdlg-loading">Suche …</div>`;
+      let treffer = [];
+      try {
+        const res = await this._hass.callWS({
+          type: "tandoor/kochliste_suche",
+          q,
+          entity_id: this._config.entity || undefined,
+        });
+        treffer = res.treffer || [];
+      } catch (err) {
+        treffer = [];
+      }
+      ergebnisse.innerHTML =
+        treffer.map((t, n) =>
+          `<div class="a-treffer" data-n="${n}">${t.bild ? `<img src="${this._esc(t.bild)}">` : `<span class="a-noimg">🍽️</span>`}<span>${this._esc(t.titel)}</span></div>`
+        ).join("") +
+        `<div class="a-treffer a-frei">📝 „${this._esc(q)}" als Freitext übernehmen<br><small>Ein passendes Rezept wird beim nächsten Stundenlauf automatisch gesucht.</small></div>`;
+      ergebnisse.querySelectorAll(".a-treffer[data-n]").forEach((el) => {
+        el.addEventListener("click", () =>
+          hinzufuegen({ recipe_id: Number(treffer[Number(el.dataset.n)].recipe_id) }, el));
+      });
+      const frei = ergebnisse.querySelector(".a-frei");
+      if (frei) frei.addEventListener("click", () => hinzufuegen({ freitext: q }, frei));
+    };
+    root.querySelector(".a-suchen").addEventListener("click", suchen);
+    feld.addEventListener("keydown", (ev) => { if (ev.key === "Enter") suchen(); });
+    feld.focus();
   }
 
   _openWunschDialog() {
