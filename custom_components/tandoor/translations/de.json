@@ -68,6 +68,20 @@
         }
       }
     },
+    "kochliste_add": {
+      "name": "Kochliste: Gericht hinzufügen",
+      "description": "Setzt ein Gericht auf die Kochliste — entweder ein vorhandenes Tandoor-Rezept (recipe_id) oder Freitext. Freitext-Einträge bekommen beim nächsten stündlichen Agenten-Lauf automatisch ein passendes Rezept hinterlegt.",
+      "fields": {
+        "recipe_id": {
+          "name": "Rezept-ID",
+          "description": "Tandoor-Rezept-ID (leer lassen bei Freitext)."
+        },
+        "freitext": {
+          "name": "Freitext",
+          "description": "Gericht als Freitext, z. B. „Eierschwammerlsauce mit Knödel“."
+        }
+      }
+    },
     "kochliste_wunsch": {
       "name": "Kochliste: Wunsch für nächste Runde",
       "description": "Trägt einen Wunsch (Freitext oder Rezept-Link) ein, den der Agent bei der nächsten Vorschlagsrunde berücksichtigt.",

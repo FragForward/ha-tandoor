@@ -68,6 +68,20 @@
         }
       }
     },
+    "kochliste_add": {
+      "name": "Kochliste: add dish",
+      "description": "Adds a dish to the Kochliste — either an existing Tandoor recipe (recipe_id) or free text. Free-text entries get a matching recipe looked up automatically on the next hourly agent run.",
+      "fields": {
+        "recipe_id": {
+          "name": "Recipe ID",
+          "description": "Tandoor recipe ID (leave empty when using free text)."
+        },
+        "freitext": {
+          "name": "Free text",
+          "description": "Dish as free text, e.g. 'chanterelle sauce with dumplings'."
+        }
+      }
+    },
     "kochliste_wunsch": {
       "name": "Kochliste: wish for next round",
       "description": "Adds a wish (free text or recipe link) that the agent considers in the next proposal round.",
