@@ -197,6 +197,37 @@ async def ws_kochliste_suche(
     connection.send_result(msg["id"], {"treffer": treffer})
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "tandoor/kochliste_wuensche",
+        vol.Optional("entity_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_kochliste_wuensche(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Return current wishes + editable templates for the card dialog."""
+    entry = _resolve_entry(hass, msg.get("entity_id"))
+    if entry is None or entry.runtime_data.kochliste is None:
+        connection.send_error(msg["id"], "not_found", "Kochliste not available")
+        return
+    try:
+        data = await entry.runtime_data.kochliste.client.wunsch_uebersicht()
+    except EssensplanError as err:
+        connection.send_error(msg["id"], "essensplan_error", str(err))
+        return
+    connection.send_result(
+        msg["id"],
+        {
+            "eintraege": data.get("eintraege") or [],
+            "vorlagen": data.get("vorlagen") or [],
+        },
+    )
+
+
 @callback
 def async_register_websocket_api(hass: HomeAssistant) -> None:
     """Register the Tandoor WebSocket commands (idempotent per HA start)."""
@@ -204,3 +235,4 @@ def async_register_websocket_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_rating)
     websocket_api.async_register_command(hass, ws_kochliste_zutaten)
     websocket_api.async_register_command(hass, ws_kochliste_suche)
+    websocket_api.async_register_command(hass, ws_kochliste_wuensche)

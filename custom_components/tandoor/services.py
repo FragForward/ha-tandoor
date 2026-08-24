@@ -29,6 +29,9 @@ KOCHLISTE_WUNSCH_SCHEMA = vol.Schema({vol.Required("text"): cv.string})
 SERVICE_KOCHLISTE_ADD = "kochliste_add"
 SERVICE_KOCHLISTE_DEL = "kochliste_del"
 SERVICE_KOCHLISTE_ZURUECK = "kochliste_zurueck"
+SERVICE_KOCHLISTE_WUNSCH_DEL = "kochliste_wunsch_del"
+SERVICE_KOCHLISTE_VORLAGE_ADD = "kochliste_vorlage_add"
+SERVICE_KOCHLISTE_VORLAGE_DEL = "kochliste_vorlage_del"
 KOCHLISTE_ADD_SCHEMA = vol.All(
     vol.Schema(
         {
@@ -150,6 +153,34 @@ def async_register_services(hass: HomeAssistant) -> None:
         except EssensplanError as err:
             raise HomeAssistantError(f"Kochliste nachschub failed: {err}") from err
 
+    async def handle_wunsch_del(call: ServiceCall) -> None:
+        """Remove a wish from the wish basket."""
+        entry = _kochliste_entry(hass)
+        try:
+            await entry.runtime_data.kochliste.client.wunsch_del(call.data["id"])
+        except EssensplanError as err:
+            raise HomeAssistantError(f"Wunsch del failed: {err}") from err
+
+    async def handle_vorlage_add(call: ServiceCall) -> None:
+        """Add a reusable wish template."""
+        entry = _kochliste_entry(hass)
+        try:
+            await entry.runtime_data.kochliste.client.wunsch_vorlage_add(
+                call.data["text"]
+            )
+        except EssensplanError as err:
+            raise HomeAssistantError(f"Vorlage add failed: {err}") from err
+
+    async def handle_vorlage_del(call: ServiceCall) -> None:
+        """Remove a reusable wish template."""
+        entry = _kochliste_entry(hass)
+        try:
+            await entry.runtime_data.kochliste.client.wunsch_vorlage_del(
+                call.data["text"]
+            )
+        except EssensplanError as err:
+            raise HomeAssistantError(f"Vorlage del failed: {err}") from err
+
     async def handle_bewerten(call: ServiceCall) -> None:
         """Rate a recipe 0-5 stars with an optional comment."""
         entry = _kochliste_entry(hass)
@@ -197,4 +228,22 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN, SERVICE_KOCHLISTE_ZURUECK, handle_zurueck, schema=KOCHLISTE_ID_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_KOCHLISTE_WUNSCH_DEL,
+        handle_wunsch_del,
+        schema=KOCHLISTE_ID_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_KOCHLISTE_VORLAGE_ADD,
+        handle_vorlage_add,
+        schema=KOCHLISTE_WUNSCH_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_KOCHLISTE_VORLAGE_DEL,
+        handle_vorlage_del,
+        schema=KOCHLISTE_WUNSCH_SCHEMA,
     )

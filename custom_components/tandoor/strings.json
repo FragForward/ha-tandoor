@@ -116,6 +116,27 @@
       "name": "Kochliste: request new proposals",
       "description": "Starts a new proposal round on the next hourly watchdog run, regardless of how full the Kochliste is."
     },
+    "kochliste_wunsch_del": {
+      "name": "Kochliste: remove wish",
+      "description": "Removes a wish from the wish basket.",
+      "fields": {
+        "id": { "name": "Wish ID", "description": "The wish entry ID." }
+      }
+    },
+    "kochliste_vorlage_add": {
+      "name": "Kochliste: add wish template",
+      "description": "Adds a reusable wish template for the wish dialog.",
+      "fields": {
+        "text": { "name": "Template", "description": "Template text." }
+      }
+    },
+    "kochliste_vorlage_del": {
+      "name": "Kochliste: remove wish template",
+      "description": "Removes a reusable wish template.",
+      "fields": {
+        "text": { "name": "Template", "description": "Template text." }
+      }
+    },
     "kochliste_bewerten": {
       "name": "Kochliste: rate recipe",
       "description": "Rates a Tandoor recipe with 0-5 stars and an optional comment (0 = remove rating).",

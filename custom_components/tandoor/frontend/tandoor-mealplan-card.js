@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.19
+/* Tandoor Mealplan Card v0.5.20
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.19
+/* Tandoor Kochliste Card v0.5.20
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -759,6 +759,13 @@ class TandoorKochlisteCard extends HTMLElement {
         .a-noimg { width: 40px; text-align: center; font-size: 22px; }
         .a-frei { display: block; color: var(--secondary-text-color); }
         .a-frei small { color: var(--disabled-text-color); }
+        .w-eintrag { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--secondary-background-color); border-radius: 10px; padding: 7px 10px; margin-bottom: 6px; font-size: 14px; }
+        .w-eintrag small { color: var(--secondary-text-color); }
+        .w-del { background: none; border: 0; font-size: 16px; cursor: pointer; }
+        .w-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+        .w-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--divider-color); color: var(--primary-text-color); border-radius: 12px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+        .w-chip-del { background: none; border: 0; color: var(--secondary-text-color); cursor: pointer; font-size: 11px; padding: 0; }
+        .w-merken { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--secondary-text-color); margin-top: 8px; }
         .kfuss .kbtn { flex: 1 1 0; justify-content: center; background: var(--divider-color); color: var(--primary-text-color); font-weight: 600; font-size: 12px; padding: 9px 6px; }
         .kfuss .kbtn:disabled { opacity: 0.7; cursor: default; }
         .ktap { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px; }
@@ -949,15 +956,63 @@ class TandoorKochlisteCard extends HTMLElement {
     this._openDialog(`
       <div class="tdlg-body">
         <h2>💡 Das will ich haben</h2>
-        <p class="klbl">Rezept-Link oder Wunsch (z. B. „etwas Asiatisches") — wird bei der nächsten Vorschlagsrunde berücksichtigt.</p>
-        <textarea class="kcomment w-text" rows="3" placeholder="Link oder Wunsch eingeben …"></textarea>
+        <div class="w-liste"><div class="tdlg-loading">Lade Wünsche …</div></div>
+        <p class="klbl">Rezept-Link, Wunsch oder Anweisung an den Agenten — gilt für die nächste Vorschlagsrunde.</p>
+        <textarea class="kcomment w-text" rows="2" placeholder="Link oder Wunsch eingeben …"></textarea>
+        <label class="w-merken"><input type="checkbox" class="w-vorlage"> als Vorlage merken</label>
         <div class="tdlg-actions">
-          <button class="tdlg-btn sec w-abbruch">Abbrechen</button>
-          <button class="tdlg-btn gruen w-save"><ha-icon icon="mdi:check"></ha-icon>Speichern</button>
+          <button class="tdlg-btn sec w-abbruch">Schließen</button>
+          <button class="tdlg-btn gruen w-save"><ha-icon icon="mdi:check"></ha-icon>Wunsch speichern</button>
         </div>
       </div>`);
     const root = this.shadowRoot.querySelector(".tdlg-content");
     if (!root) return;
+    const liste = root.querySelector(".w-liste");
+    const laden = async () => {
+      try {
+        const d = await this._hass.callWS({
+          type: "tandoor/kochliste_wuensche",
+          entity_id: this._config.entity || undefined,
+        });
+        const wuensche = (d.eintraege || []).map((e) =>
+          `<div class="w-eintrag"><span>💡 ${this._esc(e.text)}<small> (${this._esc(e.person || "")})</small></span><button class="w-del" data-id="${this._esc(e.id)}">🗑</button></div>`
+        ).join("");
+        const chips = (d.vorlagen || []).map((v) =>
+          `<span class="w-chip" data-text="${this._esc(v)}">${this._esc(v)}<button class="w-chip-del" data-text="${this._esc(v)}" title="Vorlage löschen">✕</button></span>`
+        ).join("");
+        liste.innerHTML =
+          (wuensche ? `<div class="zst-kopf">Aktuelle Wünsche für die nächste Runde</div>${wuensche}` : `<div class="leer">Noch keine Wünsche für die nächste Runde.</div>`) +
+          (chips ? `<div class="zst-kopf">Vorlagen (antippen = übernehmen)</div><div class="w-chips">${chips}</div>` : "");
+        liste.querySelectorAll(".w-del").forEach((el) => {
+          el.addEventListener("click", async () => {
+            el.disabled = true;
+            try {
+              await this._hass.callService("tandoor", "kochliste_wunsch_del", { id: el.dataset.id });
+            } catch (err) { /* Anzeige lädt gleich neu */ }
+            laden();
+          });
+        });
+        liste.querySelectorAll(".w-chip").forEach((el) => {
+          el.addEventListener("click", (ev) => {
+            if (ev.target.classList.contains("w-chip-del")) return;
+            root.querySelector(".w-text").value = el.dataset.text;
+          });
+        });
+        liste.querySelectorAll(".w-chip-del").forEach((el) => {
+          el.addEventListener("click", async (ev) => {
+            ev.stopPropagation();
+            if (!window.confirm(`Vorlage „${el.dataset.text}“ löschen?`)) return;
+            try {
+              await this._hass.callService("tandoor", "kochliste_vorlage_del", { text: el.dataset.text });
+            } catch (err) { /* Anzeige lädt gleich neu */ }
+            laden();
+          });
+        });
+      } catch (err) {
+        liste.innerHTML = `<div class="leer">Konnte Wünsche nicht laden: ${this._esc((err && err.message) || err)}</div>`;
+      }
+    };
+    laden();
     root.querySelector(".w-abbruch").addEventListener("click", () => this._closeDialog());
     root.querySelector(".w-save").addEventListener("click", async () => {
       const text = (root.querySelector(".w-text").value || "").trim();
@@ -966,6 +1021,9 @@ class TandoorKochlisteCard extends HTMLElement {
       save.disabled = true;
       try {
         await this._hass.callService("tandoor", "kochliste_wunsch", { text });
+        if (root.querySelector(".w-vorlage").checked) {
+          await this._hass.callService("tandoor", "kochliste_vorlage_add", { text });
+        }
       } catch (err) {
         save.disabled = false;
         const warn = document.createElement("div");
@@ -974,7 +1032,10 @@ class TandoorKochlisteCard extends HTMLElement {
         root.appendChild(warn);
         return;
       }
-      this._closeDialog();
+      root.querySelector(".w-text").value = "";
+      root.querySelector(".w-vorlage").checked = false;
+      save.disabled = false;
+      laden();
     });
   }
 
