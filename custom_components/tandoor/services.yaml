@@ -64,6 +64,30 @@ kochliste_wunsch:
 
 kochliste_nachschub:
 
+kochliste_wunsch_del:
+  fields:
+    id:
+      required: true
+      example: w688a1b2c3
+      selector:
+        text:
+
+kochliste_vorlage_add:
+  fields:
+    text:
+      required: true
+      example: "5 gesunde Gerichte zusätzlich"
+      selector:
+        text:
+
+kochliste_vorlage_del:
+  fields:
+    text:
+      required: true
+      example: "5 gesunde Gerichte zusätzlich"
+      selector:
+        text:
+
 kochliste_bewerten:
   fields:
     recipe_id:

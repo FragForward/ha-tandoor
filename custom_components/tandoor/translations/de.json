@@ -117,6 +117,27 @@
       "description": "Startet beim nächsten stündlichen Wächter-Lauf eine neue Vorschlagsrunde — egal wie voll die Kochliste ist.",
       "fields": {}
     },
+    "kochliste_wunsch_del": {
+      "name": "Kochliste: Wunsch löschen",
+      "description": "Entfernt einen Wunsch aus dem Wunschkorb.",
+      "fields": {
+        "id": { "name": "Wunsch-ID", "description": "Die ID des Wunsch-Eintrags." }
+      }
+    },
+    "kochliste_vorlage_add": {
+      "name": "Kochliste: Wunsch-Vorlage hinzufügen",
+      "description": "Legt eine wiederverwendbare Vorlage für den Wunsch-Dialog an.",
+      "fields": {
+        "text": { "name": "Vorlage", "description": "Vorlagen-Text." }
+      }
+    },
+    "kochliste_vorlage_del": {
+      "name": "Kochliste: Wunsch-Vorlage löschen",
+      "description": "Entfernt eine Wunsch-Vorlage.",
+      "fields": {
+        "text": { "name": "Vorlage", "description": "Vorlagen-Text." }
+      }
+    },
     "kochliste_bewerten": {
       "name": "Kochliste: Rezept bewerten",
       "description": "Bewertet ein Tandoor-Rezept mit 0-5 Sternen und optionalem Kommentar (0 = Bewertung löschen).",

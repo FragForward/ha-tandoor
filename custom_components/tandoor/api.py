@@ -450,6 +450,25 @@ class EssensplanClient:
         """Add a wish (free text or link) for the next proposal round."""
         await self._post_ok("naechste_add", {"text": text})
 
+    async def wunsch_del(self, wunsch_id: str) -> None:
+        """Remove a wish from the wish basket."""
+        await self._post_ok("naechste_del", {"id": wunsch_id})
+
+    async def wunsch_uebersicht(self) -> dict[str, Any]:
+        """Return current wishes and the editable template list."""
+        data = await self._request("POST", "wunsch_uebersicht", json={})
+        if not isinstance(data, dict):
+            raise EssensplanError("wunsch_uebersicht response is not an object")
+        return data
+
+    async def wunsch_vorlage_add(self, text: str) -> None:
+        """Add a reusable wish template."""
+        await self._post_ok("wunsch_vorlage_add", {"text": text})
+
+    async def wunsch_vorlage_del(self, text: str) -> None:
+        """Remove a reusable wish template."""
+        await self._post_ok("wunsch_vorlage_del", {"text": text})
+
     async def nachschub_anfordern(self) -> None:
         """Request a fresh proposal round on the next watchdog run."""
         await self._post_ok("nachschub_anfordern", {})
