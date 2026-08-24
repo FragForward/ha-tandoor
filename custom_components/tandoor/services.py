@@ -27,6 +27,8 @@ SERVICE_KOCHLISTE_NACHSCHUB = "kochliste_nachschub"
 
 KOCHLISTE_WUNSCH_SCHEMA = vol.Schema({vol.Required("text"): cv.string})
 SERVICE_KOCHLISTE_ADD = "kochliste_add"
+SERVICE_KOCHLISTE_DEL = "kochliste_del"
+SERVICE_KOCHLISTE_ZURUECK = "kochliste_zurueck"
 KOCHLISTE_ADD_SCHEMA = vol.All(
     vol.Schema(
         {
@@ -114,6 +116,24 @@ def async_register_services(hass: HomeAssistant) -> None:
             raise HomeAssistantError(f"Kochliste add failed: {err}") from err
         await _refresh(entry)
 
+    async def handle_del(call: ServiceCall) -> None:
+        """Remove a Kochliste item (not counted as cooked)."""
+        entry = _kochliste_entry(hass)
+        try:
+            await entry.runtime_data.kochliste.client.kochliste_del(call.data["id"])
+        except EssensplanError as err:
+            raise HomeAssistantError(f"Kochliste del failed: {err}") from err
+        await _refresh(entry)
+
+    async def handle_zurueck(call: ServiceCall) -> None:
+        """Move a Kochliste item back to shopping state."""
+        entry = _kochliste_entry(hass)
+        try:
+            await entry.runtime_data.kochliste.client.einkauf_zurueck(call.data["id"])
+        except EssensplanError as err:
+            raise HomeAssistantError(f"Kochliste zurueck failed: {err}") from err
+        await _refresh(entry)
+
     async def handle_wunsch(call: ServiceCall) -> None:
         """Add a wish (text or link) for the next proposal round."""
         entry = _kochliste_entry(hass)
@@ -171,4 +191,10 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN, SERVICE_KOCHLISTE_ADD, handle_add, schema=KOCHLISTE_ADD_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_KOCHLISTE_DEL, handle_del, schema=KOCHLISTE_ID_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_KOCHLISTE_ZURUECK, handle_zurueck, schema=KOCHLISTE_ID_SCHEMA
     )

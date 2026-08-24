@@ -38,6 +38,22 @@ kochliste_add:
       selector:
         text:
 
+kochliste_del:
+  fields:
+    id:
+      required: true
+      example: k7
+      selector:
+        text:
+
+kochliste_zurueck:
+  fields:
+    id:
+      required: true
+      example: k7
+      selector:
+        text:
+
 kochliste_wunsch:
   fields:
     text:

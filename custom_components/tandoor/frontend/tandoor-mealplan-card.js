@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.17
+/* Tandoor Mealplan Card v0.5.18
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.17
+/* Tandoor Kochliste Card v0.5.18
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -737,6 +737,7 @@ class TandoorKochlisteCard extends HTMLElement {
         .kbtn.gekauft { background: rgba(255, 152, 0, 0.85); color: #fff; }
         .kbtn.gekauft:disabled { opacity: 0.6; cursor: default; }
         .tdlg-btn.gruen { background: rgba(76, 175, 80, 0.9); color: #fff; }
+        .tdlg-btn.rot { background: rgba(239, 83, 80, 0.85); color: #fff; }
         .tdlg-btn:disabled { opacity: 0.5; cursor: default; }
         .zst-kopf { font-weight: 600; font-size: 13px; color: var(--secondary-text-color); margin: 10px 0 4px; }
         .zst-ok { opacity: 0.55; text-decoration: line-through; }
@@ -1044,8 +1045,9 @@ class TandoorKochlisteCard extends HTMLElement {
       } else if (kl.gruppe === "bring") {
         statusBtns = `<button class="tdlg-btn zst-kaufliste"><ha-icon icon="mdi:format-list-checks"></ha-icon>Kaufliste</button><button class="tdlg-btn gruen zst-eingekauft"><ha-icon icon="mdi:cart-check"></ha-icon>Alles gekauft ✓</button>`;
       } else if (kl.gruppe === "kochbar") {
-        statusBtns = `<button class="tdlg-btn gruen zst-gekocht"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
+        statusBtns = `<button class="tdlg-btn sec zst-zurueck"><ha-icon icon="mdi:undo"></ha-icon>Doch noch einkaufen</button><button class="tdlg-btn gruen zst-gekocht"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
       }
+      statusBtns += `<button class="tdlg-btn rot zst-del"><ha-icon icon="mdi:trash-can-outline"></ha-icon>Entfernen</button>`;
       if (kl.gruppe === "bring" || kl.gruppe === "geplant") {
         zst = `<button class="kfold zst-fold">▸ Welche Zutaten fehlen noch?</button><div class="zst" style="display:none"></div>`;
       }
@@ -1096,6 +1098,36 @@ class TandoorKochlisteCard extends HTMLElement {
         const titel = kl.titel || (r && r.name) || "";
         const rid = r && r.id != null ? String(r.id) : "";
         this._openGekochtDialog(kl.kid, rid, titel);
+      });
+    }
+    // "Doch noch einkaufen": kochbar -> einkaufen (versehentlicher Gekauft-Klick)
+    const zurueck = root.querySelector(".zst-zurueck");
+    if (zurueck) {
+      zurueck.addEventListener("click", async () => {
+        zurueck.disabled = true;
+        try {
+          await this._hass.callService("tandoor", "kochliste_zurueck", { id: kl.kid });
+          this._closeDialog();
+        } catch (err) {
+          zurueck.disabled = false;
+          this._showWarn("Zurücksetzen fehlgeschlagen: " + ((err && err.message) || err));
+        }
+      });
+    }
+    // "Entfernen": vom Plan nehmen OHNE als gekocht zu zählen
+    const del = root.querySelector(".zst-del");
+    if (del) {
+      del.addEventListener("click", async () => {
+        const titel = kl.titel || (r && r.name) || "";
+        if (!window.confirm(`„${titel}“ von der Kochliste entfernen? (zählt nicht als gekocht)`)) return;
+        del.disabled = true;
+        try {
+          await this._hass.callService("tandoor", "kochliste_del", { id: kl.kid });
+          this._closeDialog();
+        } catch (err) {
+          del.disabled = false;
+          this._showWarn("Entfernen fehlgeschlagen: " + ((err && err.message) || err));
+        }
       });
     }
     // Zutaten-Ausklappmenü: erst beim Öffnen laden (WS kochliste_zutaten)

@@ -438,6 +438,14 @@ class EssensplanClient:
             return data["treffer"]
         return []
 
+    async def kochliste_del(self, item_id: str) -> None:
+        """Remove a Kochliste item (without counting it as cooked)."""
+        await self._post_ok("kochliste_del", {"id": item_id})
+
+    async def einkauf_zurueck(self, item_id: str) -> None:
+        """Move a Kochliste item back from 'kochbar' to 'einkaufen'."""
+        await self._post_ok("einkauf_zurueck", {"id": item_id})
+
     async def wunsch(self, text: str) -> None:
         """Add a wish (free text or link) for the next proposal round."""
         await self._post_ok("naechste_add", {"text": text})
