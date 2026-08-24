@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.18
+/* Tandoor Mealplan Card v0.5.19
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -538,7 +538,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.18
+/* Tandoor Kochliste Card v0.5.19
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,
@@ -1045,7 +1045,9 @@ class TandoorKochlisteCard extends HTMLElement {
       } else if (kl.gruppe === "bring") {
         statusBtns = `<button class="tdlg-btn zst-kaufliste"><ha-icon icon="mdi:format-list-checks"></ha-icon>Kaufliste</button><button class="tdlg-btn gruen zst-eingekauft"><ha-icon icon="mdi:cart-check"></ha-icon>Alles gekauft ✓</button>`;
       } else if (kl.gruppe === "kochbar") {
-        statusBtns = `<button class="tdlg-btn sec zst-zurueck"><ha-icon icon="mdi:undo"></ha-icon>Doch noch einkaufen</button><button class="tdlg-btn gruen zst-gekocht"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
+        // Kaufliste bleibt auch nach dem Einkauf erreichbar — von dort kann
+        // das Rezept auch zurück auf "noch nicht eingekauft" gesetzt werden.
+        statusBtns = `<button class="tdlg-btn zst-kaufliste"><ha-icon icon="mdi:format-list-checks"></ha-icon>Kaufliste</button><button class="tdlg-btn sec zst-zurueck"><ha-icon icon="mdi:undo"></ha-icon>Doch noch einkaufen</button><button class="tdlg-btn gruen zst-gekocht"><ha-icon icon="mdi:check"></ha-icon>Gekocht ✓</button>`;
       }
       statusBtns += `<button class="tdlg-btn rot zst-del"><ha-icon icon="mdi:trash-can-outline"></ha-icon>Entfernen</button>`;
       if (kl.gruppe === "bring" || kl.gruppe === "geplant") {
