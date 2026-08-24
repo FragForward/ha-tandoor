@@ -82,6 +82,26 @@
         }
       }
     },
+    "kochliste_del": {
+      "name": "Kochliste: Gericht entfernen",
+      "description": "Nimmt ein Gericht von der Kochliste, OHNE es als gekocht zu zählen.",
+      "fields": {
+        "id": {
+          "name": "Kochlisten-ID",
+          "description": "Die ID des Kochlisten-Eintrags, z. B. k7."
+        }
+      }
+    },
+    "kochliste_zurueck": {
+      "name": "Kochliste: zurück zum Einkaufen",
+      "description": "Setzt ein Gericht von „kochbar“ zurück auf „einkaufen“ (z. B. nach versehentlichem Gekauft-Klick).",
+      "fields": {
+        "id": {
+          "name": "Kochlisten-ID",
+          "description": "Die ID des Kochlisten-Eintrags, z. B. k7."
+        }
+      }
+    },
     "kochliste_wunsch": {
       "name": "Kochliste: Wunsch für nächste Runde",
       "description": "Trägt einen Wunsch (Freitext oder Rezept-Link) ein, den der Agent bei der nächsten Vorschlagsrunde berücksichtigt.",

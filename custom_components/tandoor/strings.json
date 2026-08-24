@@ -82,6 +82,26 @@
         }
       }
     },
+    "kochliste_del": {
+      "name": "Kochliste: remove dish",
+      "description": "Removes a dish from the Kochliste without counting it as cooked.",
+      "fields": {
+        "id": {
+          "name": "Kochliste ID",
+          "description": "The Kochliste item ID, e.g. k7."
+        }
+      }
+    },
+    "kochliste_zurueck": {
+      "name": "Kochliste: back to shopping",
+      "description": "Moves a dish back from 'cookable' to 'shopping needed' (e.g. after an accidental 'bought' click).",
+      "fields": {
+        "id": {
+          "name": "Kochliste ID",
+          "description": "The Kochliste item ID, e.g. k7."
+        }
+      }
+    },
     "kochliste_wunsch": {
       "name": "Kochliste: wish for next round",
       "description": "Adds a wish (free text or recipe link) that the agent considers in the next proposal round.",
