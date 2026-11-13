@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.4.0
+/* Tandoor Mealplan Card v0.4.1
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -9,6 +9,8 @@
  *   entity: sensor.tandoor_essensplan_heute   # your "Meal plan today" sensor
  *   days_to_show: 2
  */
+
+const TANDOOR_CARD_VERSION = "0.4.1";
 
 const TANDOOR_CARD_DEFAULTS = {
   days_to_show: 2,
@@ -152,6 +154,7 @@ class TandoorMealplanCard extends HTMLElement {
       }
     } catch (err) {
       // Nie die HA-Fehlerkarte auslösen — lieber lesbare Meldung in der Karte zeigen.
+      console.error("[tandoor-card] render failed:", err);
       content = `<div class="leer">Anzeige fehlgeschlagen: ${this._esc((err && err.message) || err)}</div>`;
     }
 
@@ -283,6 +286,7 @@ class TandoorMealplanCard extends HTMLElement {
       this._setDialogContent(this._recipeHtml(r));
       this._wireDialogRecipe();
     } catch (err) {
+      console.error("[tandoor-card] recipe load failed:", err);
       this._setDialogContent(
         `<div class="tdlg-body"><h2>Rezept</h2><p>Konnte nicht geladen werden.</p><p class="leer">${this._esc((err && err.message) || err)}</p><div class="tdlg-actions"><button class="tdlg-btn sec tdlg-close">Schließen</button></div></div>`
       );
@@ -388,6 +392,7 @@ class TandoorMealplanCard extends HTMLElement {
         entity_id: this._config.entity,
       });
     } catch (err) {
+      console.error("[tandoor-card] set_rating failed:", err);
       const root = this.shadowRoot.querySelector(".tdlg-content");
       if (root) {
         const warn = document.createElement("div");
@@ -439,6 +444,7 @@ class TandoorMealplanCard extends HTMLElement {
       this._render(st);
     } catch (err) {
       // Absturz beim Rendern darf nicht die HA-Fehlerkarte (rotes Kästchen) auslösen.
+      console.error("[tandoor-card] hass update failed:", err);
       if (!this.shadowRoot) this.attachShadow({ mode: "open" });
       this.shadowRoot.innerHTML = `<ha-card style="padding:12px 16px 16px"><div style="color:var(--secondary-text-color);font-style:italic">Tandoor-Karte: Anzeige fehlgeschlagen (${this._esc((err && err.message) || err)})</div></ha-card>`;
     }
@@ -553,3 +559,7 @@ if (!window.customCards.some((c) => c.type === "tandoor-mealplan-card")) {
     preview: true,
   });
 }
+// Sichtbarer Ladebeweis: in der Browser-Konsole nach "tandoor-card" filtern.
+// Erscheint diese Zeile NICHT, wurde die JS nicht geladen (Cache/Race) und HA zeigt
+// das rote "custom element doesn't exist"-Feld.
+console.info(`[tandoor-card] loaded v${TANDOOR_CARD_VERSION}`);

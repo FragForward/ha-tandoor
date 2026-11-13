@@ -32,7 +32,12 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
             StaticPathConfig(
                 FRONTEND_URL,
                 str(Path(__file__).parent / "frontend" / "tandoor-mealplan-card.js"),
-                cache_headers=False,
+                # Caching AN: die URL trägt schon ?v=FRONTEND_VERSION als Cache-Buster,
+                # d.h. neue Versionen laden frisch, gleiche Version kommt sofort aus dem
+                # Browser-Cache. Ohne Caching lädt ein oft neu ladender Kiosk-Browser die
+                # Datei jedes Mal neu -> Race, bei dem die Karte vor ihrer JS gerendert
+                # wird ("custom element doesn't exist", rotes Feld).
+                cache_headers=True,
             )
         ]
     )
