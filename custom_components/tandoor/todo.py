@@ -22,7 +22,7 @@ PARALLEL_UPDATES = 0
 
 DESCRIPTION_AMOUNT_RE = re.compile(r"^(?P<amount>\d+(?:[.,]\d+)?)\s+(?P<unit>.{0,10}),")
 
-def _parse_description(description: str) -> tuple[float, str]:
+def _parse_description_to_amount(description: str) -> tuple[float, str]:
     """Split '2 kg' into amount and unit name."""
     text = (description or "").strip()
     if match := DESCRIPTION_AMOUNT_RE.match(text):
@@ -82,7 +82,7 @@ class TandoorShoppingListTodoEntity(TandoorEntity, TodoListEntity):
     async def async_create_todo_item(self, item: TodoItem) -> None:
         """Add an item to the shopping list."""
         summary = (item.summary or "").strip()
-        amount, unit_name = _parse_description(item.description or "")
+        amount, unit_name = _parse_description_to_amount(item.description or "")
         if not summary:
             raise HomeAssistantError("Item name must not be empty")
         try:
@@ -102,7 +102,7 @@ class TandoorShoppingListTodoEntity(TandoorEntity, TodoListEntity):
         unit_name: str | None = None
 
         if item.description:
-            amount, unit_name = _parse_description(item.description)
+            amount, unit_name = _parse_description_to_amount(item.description)
 
         if amount == entry.amount:
             amount = None  # No change in amount
