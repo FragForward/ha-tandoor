@@ -92,7 +92,7 @@ Ablauf je Änderung: globaler Skill `feature-ablauf`.
 - **Bring-Rückkanal** ordnet über den Artikelnamen zu (ohne Groß-/Kleinschreibung); wird ein Artikel in Bring umbenannt, bleibt das Rezept im Einkaufszustand, bis es von Hand umgestellt wird.
 - **Tandoor-Connector** hält seine Einstellungen im Speicher: nach Ändern oder Löschen den Tandoor-Container neu starten ([docs/connector.md](docs/connector.md)).
 - **Rezeptbilder** lädt der Browser direkt von Tandoor; die Tandoor-Adresse muss vom Anzeigegerät aus erreichbar sein.
-- **Alte Branches** `worktree-v05xx` auf dem Server sind gemergte Versionsstände, keine offene Arbeit.
+- **Alte Branches** `worktree-v05xx` auf dem Server sind gemergte Versionsstände, keine offene Arbeit. Nicht in `main` enthalten sind (Stand 16.11.2026) nur `worktree-tandoor-card-robustness` und `claude/shopping-list-recipe-ui-2aeko9`.
 
 ## Weiterführend
 
