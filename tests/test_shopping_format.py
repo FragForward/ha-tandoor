@@ -84,6 +84,12 @@ class UpdateChanges(unittest.TestCase):
         entry = ("Salz", 0.0, None, False)
         self.assertEqual(changes(entry, ("Salz", None, True), True), {"checked": True})
 
+    def test_k9_untrimmed_tandoor_values_do_not_count_as_change(self):
+        """Tandoor names with trailing spaces must not trigger a rename on check-off."""
+        entry = ("Mehl ", 2.0, "kg ", False)
+        self.assertEqual(changes(entry, ("Mehl", "2 kg", True), True), {"checked": True})
+        self.assertEqual(changes(entry, ("2 kg Mehl", None, True), False), {"checked": True})
+
     def test_k10_option_on_changed_description(self):
         entry = ("Mehl", 2.0, "kg", False)
         self.assertEqual(

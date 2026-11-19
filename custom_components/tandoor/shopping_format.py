@@ -75,6 +75,8 @@ def update_changes(
     if item_checked != entry_checked:
         result["checked"] = item_checked
     summary = (item_summary or "").strip()
+    entry_food = (entry_food or "").strip()
+    entry_unit = (entry_unit or "").strip() or None
 
     if not amount_in_description:
         if summary and summary != format_summary(entry_food, entry_amount, entry_unit):
