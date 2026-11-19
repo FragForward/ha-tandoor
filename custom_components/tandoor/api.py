@@ -9,6 +9,8 @@ from typing import Any
 
 import aiohttp
 
+from .shopping_format import format_amount_unit, format_summary
+
 
 class TandoorError(Exception):
     """Base error for the Tandoor client."""
@@ -39,19 +41,12 @@ class ShoppingEntry:
     @property
     def display(self) -> str:
         """Human readable representation, e.g. '2 kg Mehl'."""
-        parts: list[str] = [self.amount_and_unit or "", self.food_name]
-        return " ".join(parts)
+        return format_summary(self.food_name, self.amount, self.unit_name)
 
     @property
     def amount_and_unit(self) -> str | None:
-        """Return the amount and unit as a string, e.g. '2 kg'."""
-        parts: list[str] = []
-        if self.amount:
-            parts.append(f"{self.amount:g}")
-        if self.unit_name:
-            parts.append(self.unit_name)
-
-        return " ".join(parts) or None
+        """Amount and unit as text, e.g. '2 kg'; None when both are empty."""
+        return format_amount_unit(self.amount, self.unit_name)
 
 
 @dataclass
@@ -184,7 +179,7 @@ class TandoorClient:
         amount: float | None = None,
         unit_name: str | None = None,
     ) -> None:
-        """Update fields of a shopping list entry."""
+        """Update fields of a shopping list entry; unit_name '' removes the unit."""
         payload: dict[str, Any] = {}
         if checked is not None:
             payload["checked"] = checked
@@ -193,7 +188,7 @@ class TandoorClient:
         if amount is not None:
             payload["amount"] = amount
         if unit_name is not None:
-            payload["unit"] = {"name": unit_name}
+            payload["unit"] = {"name": unit_name} if unit_name else None
         if payload:
             await self._request(
                 "PATCH", f"/api/shopping-list-entry/{entry_id}/", json=payload

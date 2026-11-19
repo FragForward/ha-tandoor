@@ -28,11 +28,13 @@
         "description": "Optional: die Kochliste der Essensplan-Website anbinden. URL leer lassen, um das Feature zu deaktivieren.",
         "data": {
           "essensplan_url": "Essensplan-URL",
-          "bring_entity": "Einkaufsliste (Todo-Entität, z. B. Bring)"
+          "bring_entity": "Einkaufsliste (Todo-Entität, z. B. Bring)",
+          "shopping_amount_in_description": "Menge und Einheit in die Beschreibung"
         },
         "data_description": {
           "essensplan_url": "Basis-URL der Essensplan-Website, z. B. http://192.168.1.4:8091. Leer = Kochliste deaktiviert.",
-          "bring_entity": "Optional: Sind in dieser Liste alle gesendeten Zutaten eines Rezepts abgehakt, wird das Rezept automatisch kochbar. Leer = deaktiviert."
+          "bring_entity": "Optional: Sind in dieser Liste alle gesendeten Zutaten eines Rezepts abgehakt, wird das Rezept automatisch kochbar. Leer = deaktiviert.",
+          "shopping_amount_in_description": "Einkaufsliste: Der To-do-Titel ist nur das Lebensmittel, Menge und Einheit stehen in der Beschreibung (z. B. 'Zwiebel' mit '2 Stk'). Praktisch für den Abgleich mit Bring!. Aus = '2 Stk Zwiebel' im Titel."
         }
       }
     }

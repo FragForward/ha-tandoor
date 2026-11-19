@@ -22,7 +22,7 @@ entries into a Home Assistant todo entity — within seconds, no polling.
 | Direction | Tandoor **→** HA (one way) | Two way (HA edits sync back to Tandoor) |
 | Latency | Seconds (push) | Up to 60 s (polling) |
 | Target | **Any** HA todo entity (e.g. a Bring! list) | Own todo entity representing the Tandoor list |
-| Item format | `Food (amount)` in the title | `amount unit Food` as summary |
+| Item format | `Food (amount)` in the title | `amount unit Food` as summary, or (option) `Food` with `amount unit` as description |
 | Delete sync | Removes items it created when they are removed in Tandoor | Deleting in HA deletes in Tandoor |
 
 Typical setups:

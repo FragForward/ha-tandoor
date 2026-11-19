@@ -10,7 +10,7 @@ Unofficial Home Assistant integration for [Tandoor Recipes](https://github.com/T
 
 | Entity | Type | Description |
 |---|---|---|
-| Shopping list | `todo` | The Tandoor shopping list as a native to-do entity. Add, check off, rename and delete items — changes sync back to Tandoor. Leading amounts are parsed (`2 Onions` → amount 2, food *Onions*). |
+| Shopping list | `todo` | The Tandoor shopping list as a native to-do entity. Add, check off, rename and delete items — changes sync back to Tandoor. By default the title is `2 pcs Onion` and leading amounts are parsed (`2 Onions` → amount 2, food *Onions*). With the option *Amount and unit in the description* the title is just the food and amount/unit go into the description (`Onion` / `2 pcs`), like the Bring! integration. |
 | Meal plan | `calendar` | Your Tandoor meal plan as a calendar with all-day events (`Dinner: Goulash`). |
 | Meal plan today | `sensor` | Names of today's planned meals. Carries a `days` attribute with the full next 7 days (name, meal type, servings, image, recipe URL, working/waiting time) — ideal for dashboard cards. |
 | Meal plan tomorrow | `sensor` | Names of tomorrow's planned meals. |
@@ -65,7 +65,19 @@ entity: sensor.tandoor_meal_plan_today   # your "Meal plan today" sensor
 days_to_show: 2
 ```
 
-Options: `title`, `days_to_show` (1–7), `show_image`, `show_times`, `clickable`, `hide_empty_days`.
+Options: `title`, `days_to_show` (1–7), `show_image`, `show_times`, `clickable`, `hide_empty_days`, `recipe_popup`, `link_template`.
+
+**Open recipes in another app** (`link_template`): by default a recipe link opens Tandoor.
+Set a template to open something else instead, e.g. the iOS app
+[Kitshn](https://kitshn.app):
+
+```yaml
+link_template: "https://x.kitshn.app/#{url}"
+```
+
+Placeholders: `{url}` (Tandoor recipe URL), `{url_encoded}` (the same, percent-encoded),
+`{id}` (recipe id). Used for tile clicks (with `recipe_popup: false`) and the *open* button
+in the recipe dialog. Only `http(s)://` links are opened.
 
 Note: the recipe images are loaded directly from your Tandoor instance, so the browser needs to be able to reach the Tandoor URL.
 
@@ -122,6 +134,10 @@ confirm_gekocht: true   # ask before marking as cooked
 Want Tandoor shopping list entries to end up in another list app (e.g. **Bring!**)?
 **→ [Node-RED sync guide](docs/nodered-bring-sync.md)** — transfers each entry with the
 amount as description and keeps the Tandoor list empty. This is the recommended setup.
+Turn on the integration option **Amount and unit in the description** (Configure dialog):
+then the shopping list already looks like a Bring! list (`Onion` / `2 pcs`) and needs no
+parsing — also handy for simple automations that copy items with `todo.get_items` and
+`todo.add_item`.
 
 Alternatively Tandoor's built-in *Connector* can push entries itself (no Node-RED, but
 one-way, amount in the title, source list never cleared) — see [connector guide](docs/connector.md).
