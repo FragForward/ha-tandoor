@@ -39,13 +39,19 @@ class ShoppingEntry:
     @property
     def display(self) -> str:
         """Human readable representation, e.g. '2 kg Mehl'."""
+        parts: list[str] = [self.amount_and_unit or "", self.food_name]
+        return " ".join(parts)
+
+    @property
+    def amount_and_unit(self) -> str | None:
+        """Return the amount and unit as a string, e.g. '2 kg'."""
         parts: list[str] = []
         if self.amount:
             parts.append(f"{self.amount:g}")
         if self.unit_name:
             parts.append(self.unit_name)
-        parts.append(self.food_name)
-        return " ".join(parts)
+
+        return " ".join(parts) or None
 
 
 @dataclass

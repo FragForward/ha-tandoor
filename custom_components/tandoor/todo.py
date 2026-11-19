@@ -20,21 +20,21 @@ from .entity import TandoorEntity
 
 PARALLEL_UPDATES = 0
 
-AMOUNT_RE = re.compile(r"^(\d+(?:[.,]\d+)?)\s+(.+)$")
+DESCRIPTION_AMOUNT_RE = re.compile(r"^(?P<amount>\d+(?:[.,]\d+)?)\s+(?P<unit>.{0,10}),")
 
-
-def _parse_summary(summary: str) -> tuple[float, str]:
-    """Split '2 Zwiebel' into amount and food name."""
-    text = (summary or "").strip()
-    if match := AMOUNT_RE.match(text):
-        return float(match.group(1).replace(",", ".")), match.group(2).strip()
-    return 0.0, text
+def _parse_description_to_amount(description: str) -> tuple[float, str]:
+    """Split '2 kg' into amount and unit name."""
+    text = (description or "").strip()
+    if match := DESCRIPTION_AMOUNT_RE.match(text):
+        return float(match.group('amount').replace(",", ".")), match.group('unit').strip()
+    return 0.0, ""
 
 
 def _convert_entry(entry: ShoppingEntry) -> TodoItem:
     """Convert a Tandoor shopping entry into a TodoItem."""
     return TodoItem(
-        summary=entry.display,
+        summary=entry.food_name,
+        description=entry.amount_and_unit,
         uid=str(entry.entry_id),
         status=(
             TodoItemStatus.COMPLETED if entry.checked else TodoItemStatus.NEEDS_ACTION
@@ -81,11 +81,12 @@ class TandoorShoppingListTodoEntity(TandoorEntity, TodoListEntity):
 
     async def async_create_todo_item(self, item: TodoItem) -> None:
         """Add an item to the shopping list."""
-        amount, food = _parse_summary(item.summary or "")
-        if not food:
+        summary = (item.summary or "").strip()
+        amount, unit_name = _parse_description_to_amount(item.description or "")
+        if not summary:
             raise HomeAssistantError("Item name must not be empty")
         try:
-            await self.coordinator.client.create_shopping_entry(food, amount)
+            await self.coordinator.client.create_shopping_entry(summary, amount, unit_name)
         except TandoorError as err:
             raise HomeAssistantError(f"Could not add item: {err}") from err
         await self.coordinator.async_refresh()
@@ -97,17 +98,24 @@ class TandoorShoppingListTodoEntity(TandoorEntity, TodoListEntity):
             raise HomeAssistantError("Item not found on the shopping list")
 
         checked = item.status == TodoItemStatus.COMPLETED
-        food_name: str | None = None
         amount: float | None = None
-        if item.summary and item.summary.strip() != entry.display:
-            amount, food_name = _parse_summary(item.summary)
+        unit_name: str | None = None
+
+        if item.description:
+            amount, unit_name = _parse_description_to_amount(item.description)
+
+        if amount == entry.amount:
+            amount = None  # No change in amount
+        if unit_name == entry.unit_name:
+            unit_name = None  # No change in unit name
 
         try:
             await self.coordinator.client.update_shopping_entry(
                 entry.entry_id,
                 checked=checked if checked != entry.checked else None,
-                food_name=food_name,
+                food_name=item.summary,
                 amount=amount,
+                unit_name=unit_name
             )
         except TandoorError as err:
             raise HomeAssistantError(f"Could not update item: {err}") from err
