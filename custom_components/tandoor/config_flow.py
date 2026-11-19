@@ -21,6 +21,7 @@ from .api import TandoorAuthenticationError, TandoorClient, TandoorConnectionErr
 from .const import (
     CONF_BRING_ENTITY,
     CONF_ESSENSPLAN_URL,
+    CONF_SHOPPING_AMOUNT_IN_DESCRIPTION,
     DEFAULT_ESSENSPLAN_URL,
     DOMAIN,
 )
@@ -80,7 +81,7 @@ class TandoorConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class TandoorOptionsFlow(OptionsFlow):
-    """Options flow: URL of the Essensplan website (Kochliste feature)."""
+    """Options flow: Kochliste URL, Bring entity and shopping list format."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -100,6 +101,9 @@ class TandoorOptionsFlow(OptionsFlow):
             CONF_ESSENSPLAN_URL, DEFAULT_ESSENSPLAN_URL
         )
         current_bring = self.config_entry.options.get(CONF_BRING_ENTITY, "")
+        current_desc = bool(
+            self.config_entry.options.get(CONF_SHOPPING_AMOUNT_IN_DESCRIPTION, False)
+        )
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -115,6 +119,9 @@ class TandoorOptionsFlow(OptionsFlow):
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(domain="todo")
                     ),
+                    vol.Optional(
+                        CONF_SHOPPING_AMOUNT_IN_DESCRIPTION, default=current_desc
+                    ): bool,
                 }
             ),
         )

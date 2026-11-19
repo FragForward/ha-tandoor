@@ -1,4 +1,4 @@
-/* Tandoor Mealplan Card v0.5.20
+/* Tandoor Mealplan Card v0.5.21
  * Shows the Tandoor meal plan with recipe images, times and servings.
  * Data source: the "Meal plan today" sensor of the ha-tandoor integration
  * (attribute "days": [{date, meals: [{name, meal_type, servings, image, url,
@@ -25,7 +25,23 @@ const TANDOOR_CARD_DEFAULTS = {
   compact_empty_days: true, // Tage ohne Rezept kompakt in einer Zeile anzeigen
   show_rating: true, // Bewertungssterne anzeigen und bearbeitbar machen
   recipe_popup: true, // Klick öffnet Rezept im In-Page-Dialog (statt neuem Tab) – nötig für Fully Kiosk
+  link_template: "", // eigene Link-Adresse, z. B. https://x.kitshn.app/#{url}; leer = Tandoor
 };
+
+// Rezept-Link aus der Vorlage bauen ({url}, {url_encoded}, {id}); leer = Tandoor-URL.
+function tandoorBuildLink(template, url, id) {
+  if (!url) return "";
+  if (!template) return url;
+  return String(template)
+    .split("{url_encoded}").join(encodeURIComponent(url))
+    .split("{url}").join(url)
+    .split("{id}").join(id == null ? "" : String(id));
+}
+
+// Nur http(s)-Links öffnen, alles andere verwerfen.
+function tandoorSafeLink(link) {
+  return /^https?:\/\//i.test(link || "") ? link : "";
+}
 
 function tandoorFindMealplanSensor(hass) {
   if (!hass) return "";
@@ -86,7 +102,9 @@ class TandoorMealplanCard extends HTMLElement {
     const compact = !hasImg && c.compact_no_image;
     const rid = m.recipe_id != null ? String(m.recipe_id) : "";
     const canPopup = c.recipe_popup && rid;
-    const link = c.clickable && m.url ? this._esc(m.url) : "";
+    const link = c.clickable && m.url
+      ? this._esc(tandoorBuildLink(c.link_template, m.url, m.recipe_id))
+      : "";
     const clickable = canPopup || link;
     let img = "";
     if (hasImg) {
@@ -237,10 +255,10 @@ class TandoorMealplanCard extends HTMLElement {
 
   _onTileClick(el) {
     const rid = el.dataset.recipeId || "";
-    const url = el.dataset.link || "";
+    const url = tandoorSafeLink(el.dataset.link);
     if (this._config.recipe_popup && rid) {
       this._openRecipeDialog(rid);
-    } else if (/^https?:\/\//i.test(url)) {
+    } else if (url) {
       window.open(url, "_blank", "noopener");
     }
   }
@@ -327,7 +345,7 @@ class TandoorMealplanCard extends HTMLElement {
         ${r.description ? `<div class="tdlg-desc">${this._esc(r.description)}</div>` : ""}
         ${steps}
         <div class="tdlg-actions">
-          ${r.url ? `<button class="tdlg-btn tdlg-open" data-url="${this._esc(r.url)}"><ha-icon icon="mdi:open-in-new"></ha-icon>In Tandoor öffnen</button>` : ""}
+          ${r.url ? `<button class="tdlg-btn tdlg-open" data-url="${this._esc(tandoorBuildLink(c.link_template, r.url, r.id))}"><ha-icon icon="mdi:open-in-new"></ha-icon>${c.link_template ? "Rezept öffnen" : "In Tandoor öffnen"}</button>` : ""}
           <button class="tdlg-btn sec tdlg-close">Schließen</button>
         </div>
       </div>`;
@@ -339,8 +357,8 @@ class TandoorMealplanCard extends HTMLElement {
     const open = root.querySelector(".tdlg-open");
     if (open) {
       open.addEventListener("click", () => {
-        const u = open.dataset.url || "";
-        if (/^https?:\/\//i.test(u)) window.open(u, "_blank", "noopener");
+        const u = tandoorSafeLink(open.dataset.url);
+        if (u) window.open(u, "_blank", "noopener");
       });
     }
     const close = root.querySelector(".tdlg-close");
@@ -473,6 +491,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
       compact_empty_days: "Leere Tage kompakt (einzeilig) anzeigen",
       show_rating: "Bewertungssterne anzeigen/bearbeiten",
       recipe_popup: "Rezept im Popup öffnen (Fully Kiosk)",
+      link_template: "Link-Vorlage, z. B. https://x.kitshn.app/#{url} (leer = Tandoor)",
     };
     const en = {
       entity: "Meal plan sensor (Tandoor 'Meal plan today')",
@@ -487,6 +506,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
       compact_empty_days: "Compact (single-line) empty days",
       show_rating: "Show/edit rating stars",
       recipe_popup: "Open recipe in popup (Fully Kiosk)",
+      link_template: "Link template, e.g. https://x.kitshn.app/#{url} (empty = Tandoor)",
     };
     return String(lang || "").startsWith("de") ? de : en;
   }
@@ -531,6 +551,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
       { name: "show_rating", selector: { boolean: {} } },
       { name: "clickable", selector: { boolean: {} } },
       { name: "recipe_popup", selector: { boolean: {} } },
+      { name: "link_template", selector: { text: {} } },
       { name: "hide_empty_days", selector: { boolean: {} } },
       { name: "compact_empty_days", selector: { boolean: {} } },
     ];
@@ -538,7 +559,7 @@ class TandoorMealplanCardEditor extends HTMLElement {
   }
 }
 
-/* Tandoor Kochliste Card v0.5.20
+/* Tandoor Kochliste Card v0.5.21
  * Shows the Kochliste (cooking backlog) of the Essensplan website.
  * Data source: the "Kochliste" sensor of the ha-tandoor integration
  * (attributes "rezepte": [{id, titel, recipe_id, bild, quelle, status,

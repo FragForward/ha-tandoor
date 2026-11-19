@@ -14,12 +14,12 @@
 
 ## Starten / Testen / Prüfen
 
-Ausprobiert am 16.11.2026 im Worktree (Python 3.10.11, Node 24.13.1). Im Repo gibt es **keine Tests, keinen Linter und keine CI**; geprüft wird nur die Syntax, alles Weitere in einer laufenden Home-Assistant-Instanz.
+Ausprobiert am 19.11.2026 im Worktree (Python 3.10.11, Node 24.13.1). Unit-Tests gibt es nur für Logik ohne Home Assistant (Format der Einkaufsliste, Link-Vorlage der Karte); kein Linter, keine CI. Alles mit Home Assistant wird in einer laufenden Instanz geprüft.
 
 | Was | Befehl / Ort |
 |---|---|
 | Lokal starten | keiner; die Integration läuft nur in Home Assistant. `homeassistant` ist auf diesem PC nicht installiert, ein lokaler Start ist **ungeprüft** |
-| Alle Tests | keine vorhanden (kein `tests/`, kein pytest installiert) |
+| Alle Tests | `python -I -m unittest discover -s tests` (Python, ohne pytest) und `node --test tests/card_link.test.mjs` (Datei nennen: `node --test tests/` findet die `.mjs` nicht) |
 | Syntax Python | `python -m compileall -q custom_components/tandoor` (legt `__pycache__` an, steht in `.gitignore`) |
 | Syntax Karte (JS) | `node --check custom_components/tandoor/frontend/tandoor-mealplan-card.js` |
 | JSON gültig | `python -m json.tool custom_components/tandoor/manifest.json` (ebenso `hacs.json`, `strings.json`, `translations/de.json`, `translations/en.json`) |
@@ -28,7 +28,7 @@ Ausprobiert am 16.11.2026 im Worktree (Python 3.10.11, Node 24.13.1). Im Repo gi
 | Build | keiner; die Karte ist eine einzelne, von Hand gepflegte JS-Datei ohne Bundler |
 | CI | keine (`.github/` fehlt) |
 | Testsystem | keines im Repo beschrieben |
-| Live | Auslieferung über GitHub-Release mit Tag `vX.Y.Z` (zuletzt `v0.5.20`), HACS holt das Release; danach Home Assistant neu starten. Prüfung in der eigenen Instanz: Gerät „Tandoor Recipes“ mit allen Entitäten, Karten laden in der neuen Version. Ablauf aus Historie und README abgeleitet, hier **nicht ausprobiert** |
+| Live | Auslieferung über GitHub-Release mit Tag `vX.Y.Z` (zuletzt `v0.5.21`), HACS holt das Release; danach Home Assistant neu starten. Prüfung in der eigenen Instanz: Gerät „Tandoor Recipes“ mit allen Entitäten, Karten laden in der neuen Version. Ablauf aus Historie und README abgeleitet, hier **nicht ausprobiert** |
 
 ## Stack
 
@@ -43,6 +43,7 @@ Ausprobiert am 16.11.2026 im Worktree (Python 3.10.11, Node 24.13.1). Im Repo gi
 |---|---|
 | `custom_components/tandoor/__init__.py` | Setup des Eintrags, Auslieferung der Karte und Pflege der Lovelace-Ressource |
 | `custom_components/tandoor/api.py` | `TandoorClient` (Tandoor-API) und `EssensplanClient` (Kochliste), Fehlerklassen, Datenklassen |
+| `custom_components/tandoor/shopping_format.py` | Titel und Beschreibung der Einkaufsliste (reine Funktionen, getestet in `tests/`) |
 | `custom_components/tandoor/coordinator.py` | drei Koordinatoren: Einkaufsliste, Essensplan, Kochliste |
 | `custom_components/tandoor/calendar.py`, `sensor.py`, `todo.py`, `entity.py` | Entitäten |
 | `custom_components/tandoor/services.py`, `services.yaml` | Dienste `tandoor.kochliste_*` und ihre Beschreibung |
@@ -52,13 +53,14 @@ Ausprobiert am 16.11.2026 im Worktree (Python 3.10.11, Node 24.13.1). Im Repo gi
 | `custom_components/tandoor/frontend/tandoor-mealplan-card.js` | beide Karten samt Editoren |
 | `custom_components/tandoor/strings.json`, `translations/` | Texte englisch und deutsch |
 | `custom_components/tandoor/brand/`, `images/` | Logos und Bilder für README und HACS |
-| `docs/` | Anleitungen für Anwender (englisch) |
+| `docs/` | Anleitungen für Anwender (englisch); `docs/spec/` Spezifikationen |
+| `tests/` | Unit-Tests (Python `unittest`, Node `node:test`) |
 
 ## Ablauf
 
 Ablauf je Änderung: globaler Skill `feature-ablauf`.
 
-- **Spezifikationen:** noch keine; `docs/spec/<bereich>.md` entsteht beim ersten Anfassen eines Bereichs.
+- **Spezifikationen:** `docs/spec/<bereich>.md`, englisch; fehlt eine, entsteht sie beim ersten Anfassen des Bereichs.
 - **Oberfläche:** `docs/design.md` gibt es noch nicht; vor der ersten Änderung an einer Karte aus dem Bestand anlegen (Vorlage `templates/claude/design.md` im Master-Repo).
 - **Auslieferung:** je Version ein PR auf `main`, danach Tag und GitHub-Release `vX.Y.Z`. Die Versionsnummer steht an vier Stellen und wird gemeinsam erhöht: `manifest.json` (`version`), `const.py` (`FRONTEND_VERSION`) und die beiden Kopfkommentare in der Kartendatei.
 - **Wer gibt frei:** der User; Kunden gibt es nicht.
@@ -67,8 +69,8 @@ Ablauf je Änderung: globaler Skill `feature-ablauf`.
 
 | Bereich | Status | Spezifikation |
 |---|---|---|
-| Einkaufsliste (`todo`, Sensor) | fertig | fehlt |
-| Essensplan (`calendar`, Sensoren, Karte) | fertig | fehlt |
+| Einkaufsliste (`todo`, Sensor) | fertig | [shopping-list.md](docs/spec/shopping-list.md) (nur `todo`) |
+| Essensplan (`calendar`, Sensoren, Karte) | fertig | [mealplan-card.md](docs/spec/mealplan-card.md) (nur Rezept-Links der Karte) |
 | Kochliste (Sensor, Dienste, Karte, Wünsche) | fertig | fehlt |
 | Bring-Rückkanal | fertig | fehlt |
 
@@ -87,7 +89,7 @@ Ablauf je Änderung: globaler Skill `feature-ablauf`.
 
 ## Fallen, kurz
 
-- **Kartendatei über der Größengrenze:** `tandoor-mealplan-card.js` hat 1433 Zeilen (globale Regel: ab 700 teilen). Nie ganz lesen, erst nach der Klasse suchen (`TandoorMealplanCard` ab Zeile 1, `TandoorKochlisteCard` ab Zeile 541). Teilen wäre ein eigener PR und braucht einen Weg, die Teile zu einer ausgelieferten Datei zu fügen; den gibt es hier noch nicht.
+- **Kartendatei über der Größengrenze:** `tandoor-mealplan-card.js` hat 1454 Zeilen (globale Regel: ab 700 teilen). Nie ganz lesen, erst nach der Klasse suchen (`grep -n "^class Tandoor"`). Teilen wäre ein eigener PR und braucht einen Weg, die Teile zu einer ausgelieferten Datei zu fügen; den gibt es hier noch nicht.
 - **Vorgabe der Essensplan-URL** in `const.py` zeigt auf eine private Adresse im Heimnetz; fremde Installationen müssen sie in den Optionen ändern oder leeren.
 - **Bring-Rückkanal** ordnet über den Artikelnamen zu (ohne Groß-/Kleinschreibung); wird ein Artikel in Bring umbenannt, bleibt das Rezept im Einkaufszustand, bis es von Hand umgestellt wird.
 - **Tandoor-Connector** hält seine Einstellungen im Speicher: nach Ändern oder Löschen den Tandoor-Container neu starten ([docs/connector.md](docs/connector.md)).
